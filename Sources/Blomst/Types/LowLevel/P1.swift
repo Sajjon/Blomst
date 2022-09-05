@@ -81,6 +81,9 @@ internal extension P1 {
         
         internal init(lowLevel: LowLevel) {
             self.lowLevel = lowLevel
+            withUnsafeLowLevelAccess {
+                precondition(blst_p1_on_curve($0))
+            }
         }
     }
 }

@@ -39,16 +39,16 @@ public extension Signature {
     func verify(
         groupCheck: Bool,
         message: Message,
-        dst: Data,
-        aug: Data = .init(),
+        domainSeperationTag: DomainSeperationTag,
+        augmentation: Augmentation = .init(),
         publicKey: PublicKey
     ) async throws {
-        let augMsg = aug + message
+        let augMsg = augmentation + message
         
         try await aggregateVerify(
             groupCheck: groupCheck,
             messages: [augMsg],
-            dst: dst,
+            domainSeperationTag: domainSeperationTag,
             publicKeys: [publicKey]
         )
     }
@@ -62,7 +62,7 @@ public extension Signature {
     func aggregateVerify(
         groupCheck: Bool,
         messages: [Message],
-        dst: Data,
+        domainSeperationTag: DomainSeperationTag,
         publicKeys: [PublicKey]
     ) async throws {
        
@@ -79,18 +79,18 @@ public extension Signature {
             for index in 0..<publicKeys.count {
                 group.addTask {
                     let pairing = Pairing(
-                        dst: dst,
+                        domainSeperationTag: domainSeperationTag,
                         hashOrEncode: true
                     )
                     
                     let publicKey = publicKeys[index]
                     let message = messages[index]
                     
-                    try pairing.aggregate(
+                    try pairing.aggregatePublicKeyInG1(
                         publicKey: publicKey,
                         signature: self,
                         message: message,
-                        aug: Data(),
+                        augmentation: Augmentation(),
                         checkGroupOfPublicKey: false,
                         checkGroupOfSignatue: true
                     )

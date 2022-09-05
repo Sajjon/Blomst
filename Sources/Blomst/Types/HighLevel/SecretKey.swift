@@ -66,11 +66,11 @@ public extension SecretKey {
     
     func sign(
         message: Message,
-        dst: Data,
-        aug: Data = .init()
+        domainSeperationTag: DomainSeperationTag,
+        augmentation: Augmentation = .init()
     ) throws -> Signature {
-        dst.withUnsafeBytes { dstBytes in
-            aug.withUnsafeBytes { augBytes in
+        domainSeperationTag.withUnsafeBytes { dstBytes in
+            augmentation.withUnsafeBytes { augBytes in
                 message.withUnsafeBytes { msgBytes in
                     var hash = blst_p2()
                     blst_hash_to_g2(

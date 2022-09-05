@@ -88,10 +88,28 @@ final class BlomstTests: XCTestCase {
         print("publicKey: \(publicKey.hex())")
         let message = "hello foo".data(using: .utf8)!
         let dst = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_".data(using: .utf8)!
-        let signature = try secretKey.sign(message: message, dst: dst, aug: Data())
-        try await signature.verify(groupCheck: false, message: message, dst: dst, publicKey: publicKey)
+      
+        let signature = try secretKey.sign(
+            message: message,
+            domainSeperationTag: dst,
+            augmentation: .init()
+        )
+        
+        try await signature.verify(
+            groupCheck: true,
+            message: message,
+            domainSeperationTag: dst,
+            publicKey: publicKey
+        )
+        
         do {
-            try await signature.verify(groupCheck: false, message: "wrong msg".data(using: .utf8)!, dst: dst, publicKey: publicKey)
+            try await signature.verify(
+                groupCheck: true,
+                message: "wrong msg".data(using: .utf8)!,
+                domainSeperationTag: dst,
+                publicKey: publicKey
+            )
+            
             XCTFail("An signature not valid for forged faked message was considered valid, this is critically bad.")
         } catch {
             // all good

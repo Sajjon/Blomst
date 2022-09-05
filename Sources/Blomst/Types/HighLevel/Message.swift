@@ -8,3 +8,5 @@
 import Foundation
 
 public typealias Message = Data
+public typealias DomainSeperationTag = Data
+public typealias Augmentation = Data

@@ -11,3 +11,4 @@ public protocol AffineSerializable {
     associatedtype Affine
     func affine() -> Affine
 }
+

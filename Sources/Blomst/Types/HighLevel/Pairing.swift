@@ -13,26 +13,27 @@ public struct Pairing {
     
     private let v: [UInt64]
     
-    init(dst: Data, hashOrEncode: Bool) {
+    init(
+        domainSeperationTag: DomainSeperationTag,
+        hashOrEncode: Bool
+    ) {
 
         var v = [UInt64](
             repeating: 0,
             count: blst_pairing_sizeof() / 8
         )
         
-        dst.withUnsafeBytes { dstBytes in
+        domainSeperationTag.withUnsafeBytes { dstBytes in
             v.withUnsafeMutableBytes { vBytes in
                 blst_pairing_init(
                     OpaquePointer(vBytes.baseAddress),
                     hashOrEncode,
                     dstBytes.baseAddress,
-                    dst.count
+                    domainSeperationTag.count
                 )
 
             }
         }
-      
-        
         
         self.v = v
     }
@@ -49,11 +50,12 @@ public extension Pairing {
         }
     }
     
-    func aggregate(
+    /// Check and aggregate PublicKey in `G1`
+    func aggregatePublicKeyInG1(
         publicKey: PublicKey,
         signature: Signature,
         message: Message,
-        aug: Data,
+        augmentation: Augmentation,
         checkGroupOfPublicKey: Bool,
         checkGroupOfSignatue: Bool
     ) throws {
@@ -63,7 +65,7 @@ public extension Pairing {
                     let ctx = OpaquePointer($0.baseAddress)
                     try message.withUnsafeBytes { msgBytes in
                         var msgBase = OpaquePointer(msgBytes.baseAddress)
-                        try aug.withUnsafeBytes { augBytes in
+                        try augmentation.withUnsafeBytes { augBytes in
                             var augBase = OpaquePointer(augBytes.baseAddress)
 
                             guard blst_pairing_chk_n_aggr_pk_in_g1(
@@ -75,7 +77,7 @@ public extension Pairing {
                                 &msgBase,
                                 message.count,
                                 &augBase,
-                                aug.count
+                                augmentation.count
                             ) == BLST_SUCCESS else {
                                 throw Error.failedToPair
                             }
