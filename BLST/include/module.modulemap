@@ -1,0 +1,6 @@
+module BLST {
+    umbrella header "blst.h"
+    umbrella header "blst_aux.h"
+    export *
+}
+
