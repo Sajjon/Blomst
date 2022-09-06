@@ -13,11 +13,37 @@ public struct Scalar: Equatable, DataSerializable, DataRepresentable {
     internal init(storage: Storage) {
         self.storage = storage
     }
+
+    public init(uint32s: [UInt32]) {
+        self.init(storage: .init(uint32s: uint32s))
+    }
+    
+    public init(uint64s: [UInt64]) {
+        self.init(storage: .init(uint64s: uint64s))
+    }
     
     public init<D: ContiguousBytes>(data: D) throws {
         try self.init(storage: .init(data: data))
     }
 }
+
+#if DEBUG
+public extension Scalar {
+    
+    init(mostSignigicantInt: Int) {
+        self.init(mostSignificantUInt64: .init(mostSignigicantInt))
+    }
+    
+    init(mostSignificantUInt32: UInt32) {
+        self.init(storage: .init(mostSignificantUInt32: mostSignificantUInt32))
+    }
+    
+    init(mostSignificantUInt64: UInt64) {
+        self.init(storage: .init(mostSignificantUInt64: mostSignificantUInt64))
+    }
+    
+}
+#endif // DEBUG
 
 // DataSerializable
 public extension Scalar {
@@ -44,6 +70,28 @@ internal extension Scalar {
 }
 
 internal extension Scalar.Storage {
+    
+    convenience init(mostSignificantUInt32: UInt32) {
+        self.init(uint32s: [mostSignificantUInt32, 0, 0, 0, 0, 0, 0, 0])
+    }
+    
+    convenience init(uint32s: [UInt32]) {
+        var lowLevel = LowLevel()
+        var uint32s = uint32s
+        blst_scalar_from_uint32(&lowLevel, &uint32s)
+        self.init(lowLevel: lowLevel)
+    }
+    
+    convenience init(mostSignificantUInt64: UInt64) {
+        self.init(uint64s: [mostSignificantUInt64, 0, 0, 0])
+    }
+    
+    convenience init(uint64s: [UInt64]) {
+        var lowLevel = LowLevel()
+        var uint64s = uint64s
+        blst_scalar_from_uint64(&lowLevel, &uint64s)
+        self.init(lowLevel: lowLevel)
+    }
     
     enum Error: Swift.Error {
         case failedToCreateScalarFromBytes

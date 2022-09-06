@@ -5,14 +5,36 @@
 //  Created by Alexander Cyon on 2022-09-04.
 //
 
-import BLST
 import Foundation
+import CryptoKit
+import BLST
 
 public struct SecretKey: Equatable, DataSerializable, DataRepresentable {
     private let scalar: Scalar
     
     internal init(scalar: Scalar) {
         self.scalar = scalar
+    }
+}
+
+
+public extension SecretKey {
+    init<D>(inputKeyMaterial: D) throws where D: ContiguousBytes {
+        let hk = HKDF<SHA256>.extract(
+            inputKeyMaterial: .init(data: inputKeyMaterial),
+            salt: Self.salt
+        )
+        let okm = hk.withUnsafeBytes {
+            HKDF<SHA256>.expand(
+                pseudoRandomKey: $0,
+                info: Data(),
+                outputByteCount: Self.byteCount
+            )
+        }
+
+        self = try okm.withUnsafeBytes {
+            try Self.init(data: $0)
+        }
     }
 }
 
@@ -94,7 +116,10 @@ public extension SecretKey {
 }
 
 public extension SecretKey {
-    static let byteCount = 32
+    /// given by ceil((1.5 * ceil(log2(r))) / 8).
+    static let byteCount = 48
+    
+    static let salt = "BLS-SIG-KEYGEN-SALT-".data(using: .utf8)!
 }
 
 public extension SecretKey {
