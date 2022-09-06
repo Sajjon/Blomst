@@ -8,7 +8,6 @@
 import Foundation
 import BLST
 
-
 /// A wrapper of `BLS12-381` point, having three coordinates: `x, y, z`,
 /// guaranteed to be in the group `G1`.
 public struct G2Element: Equatable {

@@ -112,14 +112,149 @@ final class BlomstTests: XCTestCase {
         XCTAssertEqual(expectedPublicKeyCompressedData.hex(), "8bb1ad17ca77078a500ef0780c3c3a5f0dc26290b0bfb21d2c76f1a827bed8764d7f32332dc2db3084b1faea29134ea7")
        
         XCTAssertEqual(publicKey.compressedData().hex(), expectedPublicKeyCompressedData.hex())
+    }
+    
+    // https://github.com/eduadiez/bls12_381_ietf/blob/cd18ae1828a084af8cc02f9bd10d3aa36e749c62/src/lib.rs#L219-L319
+    func test_sign() async throws {
+        let message = Data([72, 101, 108, 108, 111, 33])
+        XCTAssertEqual(String(data: message, encoding: .utf8)!, "Hello!")
+        let domainSeperationTag = Data([
+            66, 76, 83, 95, 83, 73, 71, 95, 66, 76, 83, 49, 50, 51, 56, 49, 71, 50, 45, 83, 72, 65,
+            50, 53, 54, 45, 83, 83, 87, 85, 45, 82, 79, 45, 95, 78, 85, 76, 95,
+        ])
+        XCTAssertEqual(String(data: domainSeperationTag, encoding: .utf8)!, "BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_NUL_")
+        
         /*
-         let a = Bls12::sk_to_pk(Fr::from_str("3333").unwrap());
-                let b = [
-                    139, 177, 173, 23, 202, 119, 7, 138, 80, 14, 240, 120, 12, 60, 58, 95, 13, 194, 98,
-                    144, 176, 191, 178, 29, 44, 118, 241, 168, 39, 190, 216, 118, 77, 127, 50, 51, 45, 194,
-                    219, 48, 132, 177, 250, 234, 41, 19, 78, 167,
+        G2Affine(
+            x: .init(
+                c0: .init([
+                    0xf0827e0ff0ea4e5a,
+                    0xf67403477c64ca54,
+                    0x60105fa92270f03e,
+                    0x8179958d9ffbbe0f,
+                    0x51f68ccecfdfc76f,
+                    0x160a52dda57a6489,
+                ]),
+                c1: .init([
+                    0x48c5ac798e356233,
+                    0xa071167ae6b912b8,
+                    0x6a08e106be121b56,
+                    0xea9d2081cd7255a6,
+                    0xbfb67f385b878dfa,
+                    0x760b83bfc9b79d9,
+                ])
+            ),
+            y: .init(
+                c0: .init([
+                    0x3d9f81c519fc11b9,
+                    0xe7c922037530014e,
+                    0xf772e99043078d53,
+                    0x1deebe94e9dac409,
+                    0xc36b0d9b73456be8,
+                    0x13faaea8309e22b4,
+                ]),
+                c1: .init([
+                    0xb6929583cd3550f4,
+                    0x560edf8e11692c36,
+                    0xd27eea22e71a6e98,
+                    0xc7bdee8f51df6fd5,
+                    0xb100ef57a9208cf3,
+                    0x2aa3e3219450a96,
+                ])
+            )
+        )
+         */
+        /*
+                let result = G2Affine::from_xy_unchecked(
+                    Fq2 {
+                        c0: Fq::from_repr(FqRepr([
+                            0xf0827e0ff0ea4e5a,
+                            0xf67403477c64ca54,
+                            0x60105fa92270f03e,
+                            0x8179958d9ffbbe0f,
+                            0x51f68ccecfdfc76f,
+                            0x160a52dda57a6489,
+                        ]))
+                        .unwrap(),
+                        c1: Fq::from_repr(FqRepr([
+                            0x48c5ac798e356233,
+                            0xa071167ae6b912b8,
+                            0x6a08e106be121b56,
+                            0xea9d2081cd7255a6,
+                            0xbfb67f385b878dfa,
+                            0x760b83bfc9b79d9,
+                        ]))
+                        .unwrap(),
+                    },
+                    Fq2 {
+                        c0: Fq::from_repr(FqRepr([
+                            0x3d9f81c519fc11b9,
+                            0xe7c922037530014e,
+                            0xf772e99043078d53,
+                            0x1deebe94e9dac409,
+                            0xc36b0d9b73456be8,
+                            0x13faaea8309e22b4,
+                        ]))
+                        .unwrap(),
+                        c1: Fq::from_repr(FqRepr([
+                            0xb6929583cd3550f4,
+                            0x560edf8e11692c36,
+                            0xd27eea22e71a6e98,
+                            0xc7bdee8f51df6fd5,
+                            0xb100ef57a9208cf3,
+                            0x2aa3e3219450a96,
+                        ]))
+                        .unwrap(),
+                    },
+                );
+                assert_eq!(hash_to_g2(&message[..], &dst).into_affine(), result);
+                // edu@dappnode.io
+                let message = [
+                    101, 100, 117, 64, 100, 97, 112, 112, 110, 111, 100, 101, 46, 105, 111,
                 ];
-                assert_eq!(a.as_ref(), &b[..]);
+                let result = G2Affine::from_xy_unchecked(
+                    Fq2 {
+                        c0: Fq::from_repr(FqRepr([
+                            0x85565d90ac4b44bb,
+                            0xd2a434ca17bb4b98,
+                            0x22355c585b43e12d,
+                            0x4e9a37112267527d,
+                            0xe15ad75d93139482,
+                            0x784940eae6f11f9,
+                        ]))
+                        .unwrap(),
+                        c1: Fq::from_repr(FqRepr([
+                            0xc42aba5793264316,
+                            0xd809a0d362302f9a,
+                            0xd7ba024f48577473,
+                            0x5b03edf3357d765e,
+                            0x2d8aade70cd4e17,
+                            0x8edc88475af0832,
+                        ]))
+                        .unwrap(),
+                    },
+                    Fq2 {
+                        c0: Fq::from_repr(FqRepr([
+                            0xe1e12ec63ce51005,
+                            0x46de6681c2a53d31,
+                            0x6e0ae3e8f8090aee,
+                            0xd141442cb38deaa3,
+                            0xc35c90eb79ec0fad,
+                            0x19c96737dcfb4cf,
+                        ]))
+                        .unwrap(),
+                        c1: Fq::from_repr(FqRepr([
+                            0x35a0905c959af032,
+                            0x6461705ced47fa2d,
+                            0xb9c32d29c4fde6b2,
+                            0x4869dbfad2dbbd75,
+                            0xa3a780ca1076911f,
+                            0x1871351e7d6b1270,
+                        ]))
+                        .unwrap(),
+                    },
+                );
+                assert_eq!(hash_to_g2(&message[..], &dst).into_affine(), result);
          */
     }
     

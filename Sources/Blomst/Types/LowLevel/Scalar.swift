@@ -13,16 +13,23 @@ public struct Scalar: Equatable, DataSerializable, DataRepresentable {
     internal init(storage: Storage) {
         self.storage = storage
     }
+}
 
-    public init(uint32s: [UInt32]) {
+public extension Scalar {
+    
+    init(fr: Fr) {
+        self.init(storage: .init(fr: fr))
+    }
+    
+    init(uint32s: [UInt32]) {
         self.init(storage: .init(uint32s: uint32s))
     }
     
-    public init(uint64s: [UInt64]) {
+    init(uint64s: [UInt64]) {
         self.init(storage: .init(uint64s: uint64s))
     }
     
-    public init<D: ContiguousBytes>(data: D) throws {
+    init<D: ContiguousBytes>(data: D) throws {
         try self.init(storage: .init(data: data))
     }
 }
@@ -71,11 +78,24 @@ internal extension Scalar {
 
 internal extension Scalar.Storage {
     
+    convenience init(fr: Fr) {
+        self.init(frStorage: fr.storage)
+    }
+    
+    convenience init(frStorage: Fr.Storage) {
+        var lowLevel = LowLevel()
+        frStorage.withUnsafeLowLevelAccess {
+            blst_scalar_from_fr(&lowLevel, $0)
+        }
+        self.init(lowLevel: lowLevel)
+    }
+    
     convenience init(mostSignificantUInt32: UInt32) {
         self.init(uint32s: [mostSignificantUInt32, 0, 0, 0, 0, 0, 0, 0])
     }
     
     convenience init(uint32s: [UInt32]) {
+        precondition(uint32s.count == 8)
         var lowLevel = LowLevel()
         var uint32s = uint32s
         blst_scalar_from_uint32(&lowLevel, &uint32s)
@@ -87,6 +107,7 @@ internal extension Scalar.Storage {
     }
     
     convenience init(uint64s: [UInt64]) {
+        precondition(uint64s.count == 4)
         var lowLevel = LowLevel()
         var uint64s = uint64s
         blst_scalar_from_uint64(&lowLevel, &uint64s)

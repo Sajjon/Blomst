@@ -18,6 +18,20 @@ public struct P1: Equatable, DataSerializable, AffineSerializable, DataRepresent
     }
 }
 
+
+public extension P1 {
+    var x: Fp1 {
+        storage.x
+    }
+    var y: Fp1 {
+        storage.y
+    }
+    var z: Fp1 {
+        storage.z
+    }
+}
+
+
 public extension P1 {
     func isElementInGroupG1() -> Bool {
         withUnsafeLowLevelAccess {
@@ -78,13 +92,25 @@ internal extension P1 {
     final class Storage: Equatable, DataSerializable, DataRepresentable {
         internal typealias LowLevel = blst_p1
         private let lowLevel: LowLevel
-        
+   
         internal init(lowLevel: LowLevel) {
             self.lowLevel = lowLevel
             withUnsafeLowLevelAccess {
                 precondition(blst_p1_on_curve($0))
             }
         }
+    }
+}
+
+internal extension P1.Storage {
+    var x: Fp1 {
+        .init(storage: .init(lowLevel: lowLevel.x))
+    }
+    var y: Fp1 {
+        .init(storage: .init(lowLevel: lowLevel.y))
+    }
+    var z: Fp1 {
+        .init(storage: .init(lowLevel: lowLevel.z))
     }
 }
 
