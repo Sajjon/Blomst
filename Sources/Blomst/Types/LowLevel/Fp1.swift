@@ -9,6 +9,30 @@ import Foundation
 import BLST
 import BytePattern
 
+//public protocol Point2DRepresentable {
+//    associatedtype Magnitude
+//    var x: Magnitude { get }
+//    var y: Magnitude { get }
+//    init(x: Magnitude, y: Magnitude) throws
+//}
+//
+//extension G1Affine: Point2DRepresentable {
+//    public typealias Magnitude = Fp1
+//}
+//
+//extension P1Affine: Point2DRepresentable {
+//    public typealias Magnitude = Fp1
+//}
+//
+//
+//extension G2Affine: Point2DRepresentable {
+//    public typealias Magnitude = Fp2
+//}
+//
+//extension P2Affine: Point2DRepresentable {
+//    public typealias Magnitude = Fp2
+//}
+
 public protocol FromBigEndianBytes {
     init<D>(bigEndian: D) throws where D: ContiguousBytes
 }
@@ -18,12 +42,9 @@ public struct Fp1: Equatable, CustomStringConvertible, DataSerializable, FromBig
     init(storage: Storage) {
         self.storage = storage
     }
-//    public init<D>(data: D) throws where D : ContiguousBytes {
-//        try self.init(storage: .init(data: data))
-//    }
+
     public init<D>(bigEndian: D) throws where D: ContiguousBytes {
         try self.init(storage: .init(bigEndian: bigEndian))
-        
     }
 }
 
@@ -106,37 +127,16 @@ internal extension Fp1 {
     }
 }
 
-import BytesMutation
 internal extension Fp1.Storage {
     
     convenience init<D>(bigEndian: D) throws where D: ContiguousBytes {
-//        try self.init(storage: .init(bigEndian: bigEndian))
         var lowLevel = LowLevel()
         bigEndian.withUnsafeBytes { be in
             blst_fp_from_bendian(&lowLevel, be.baseAddress)
         }
         self.init(lowLevel: lowLevel)
     }
-    
-//    convenience init<D>(data: D) throws where D : ContiguousBytes {
-//        let data = data.swapEndianessOfUInt64sFromBytes()
-//        var lowLevel = LowLevel()
-//        data.withUnsafeBytes { dataPtr in
-//
-////            let limb0 = dataPtr.load(fromByteOffset: UInt64.byteCount * 0, as: UInt64.self)
-////            let limb1 = dataPtr.load(fromByteOffset: UInt64.byteCount * 1, as: UInt64.self)
-////            let limb2 = dataPtr.load(fromByteOffset: UInt64.byteCount * 2, as: UInt64.self)
-////            let limb3 = dataPtr.load(fromByteOffset: UInt64.byteCount * 3, as: UInt64.self)
-////            let limb4 = dataPtr.load(fromByteOffset: UInt64.byteCount * 4, as: UInt64.self)
-////            let limb5 = dataPtr.load(fromByteOffset: UInt64.byteCount * 5, as: UInt64.self)
-////            lowLevel.l = (limb0, limb1, limb2, limb3, limb4, limb5)
-//
-//            _ = Swift.withUnsafeMutableBytes(of: &lowLevel.l) { ll in
-//                dataPtr.copyBytes(to: ll)
-//            }
-//        }
-//        self.init(lowLevel: lowLevel)
-//    }
+
 }
 
 internal extension Fp1.Storage {
@@ -147,7 +147,6 @@ internal extension Fp1.Storage {
     
     convenience init(uint64s: [UInt64]) {
         precondition(uint64s.count == 6)
-//        var uint64s = uint64s
         let lowLevel = uint64s.withUnsafeBufferPointer {
             var lowLevel = LowLevel()
             blst_fp_from_uint64(&lowLevel, $0.baseAddress)
