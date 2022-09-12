@@ -23,6 +23,11 @@ public struct G2Affine: Equatable, DataSerializable {
     init(p2: P2) throws {
         try self.init(p2Affine: p2.affine())
     }
+    
+    init(lowLevel: P2.Storage.LowLevel) throws {
+        let p2 = P2(lowLevel: lowLevel)
+        try self.init(p2: p2)
+    }
 }
 
 public extension G2Affine {

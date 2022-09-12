@@ -32,6 +32,11 @@ public struct G1Affine: Equatable, CustomStringConvertible {
         try self.init(p1Affine: p1.affine())
     }
     
+    init(lowLevel: P1.Storage.LowLevel) throws {
+        let p1 = P1(lowLevel: lowLevel)
+        try self.init(p1: p1)
+    }
+    
     public init(x: Fp1, y: Fp1) throws {
         try self.init(p1Affine: P1Affine(x: x, y: y))
     }

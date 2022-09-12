@@ -92,25 +92,26 @@ internal extension Scalar.Storage {
     }
     
     convenience init(mostSignificantUInt32: UInt32) {
-        self.init(uint32s: [mostSignificantUInt32, 0, 0, 0, 0, 0, 0, 0])
+        self.init(uint32s: [0, 0, 0, 0, 0, 0, 0, mostSignificantUInt32])
     }
     
     convenience init(uint32s: [UInt32]) {
+
         precondition(uint32s.count == 8)
+        var uint64s =  [UInt32](uint32s.map { $0.littleEndian }.reversed())
         var lowLevel = LowLevel()
-        var uint32s = uint32s
-        blst_scalar_from_uint32(&lowLevel, &uint32s)
+        blst_scalar_from_uint32(&lowLevel, &uint64s)
         self.init(lowLevel: lowLevel)
     }
     
     convenience init(mostSignificantUInt64: UInt64) {
-        self.init(uint64s: [mostSignificantUInt64, 0, 0, 0])
+        self.init(uint64s: [0, 0, 0, mostSignificantUInt64])
     }
     
     convenience init(uint64s: [UInt64]) {
         precondition(uint64s.count == 4)
+        var uint64s =  [UInt64](uint64s.map { $0.littleEndian }.reversed())
         var lowLevel = LowLevel()
-        var uint64s = uint64s
         blst_scalar_from_uint64(&lowLevel, &uint64s)
         self.init(lowLevel: lowLevel)
     }

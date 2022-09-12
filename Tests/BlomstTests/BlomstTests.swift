@@ -71,13 +71,13 @@ final class BlomstTests: XCTestCase {
         let secretKey = try SecretKey(inputKeyMaterial: "edu".data(using: .utf8)!)
         
         XCTAssertEqual(secretKey, SecretKey(scalar: .init(uint64s: [
-            0x704540e43a495e37,
-            0xedd0ee81a783e073,
-            0x918acabb2d1c50e7,
             0x46229f89c6de24b9,
+            0x918acabb2d1c50e7,
+            0xedd0ee81a783e073,
+            0x704540e43a495e37,
         ])))
         
-        // Inverse every UInt64
+        // Inverse every UInt64, reverse order.
         //
         // let res_sk = [
         //     0x704540e43a495e37,
@@ -101,7 +101,6 @@ final class BlomstTests: XCTestCase {
     // https://github.com/eduadiez/bls12_381_ietf/blob/cd18ae1828a084af8cc02f9bd10d3aa36e749c62/src/lib.rs#L203-L210
     func test_from_string() throws {
        let secretKey = SecretKey(scalar: .init(mostSignigicantInt: 3333))
-        XCTAssertEqual(secretKey.hex(), "050d000000000000000000000000000000000000000000000000000000000000")
        
         
         let publicKey = secretKey.publicKey()
@@ -115,6 +114,20 @@ final class BlomstTests: XCTestCase {
         XCTAssertEqual(publicKey.compressedData().hex(), expectedPublicKeyCompressedData.hex())
     }
     
+    func test_fp1_from_uint64s() throws {
+        let fromInts = Fp1(uint64s: [
+            0xf0827e0ff0ea4e5a,
+            0xf67403477c64ca54,
+            0x60105fa92270f03e,
+            0x8179958d9ffbbe0f,
+            0x51f68ccecfdfc76f,
+            0x160a52dda57a6489
+        ])
+        let fromHex = try Fp1(bigEndian: Data(hex: "f0827e0ff0ea4e5af67403477c64ca5460105fa92270f03e8179958d9ffbbe0f51f68ccecfdfc76f160a52dda57a6489"))
+        XCTAssertBytesEqual(fromHex.toData(), fromInts.toData(), haltOnPatternNonIdentical: true)
+        XCTAssertEqual(fromHex, fromInts)
+        
+    }
   
     
     // https://github.com/eduadiez/bls12_381_ietf/blob/cd18ae1828a084af8cc02f9bd10d3aa36e749c62/src/lib.rs#L219-L319
@@ -128,7 +141,7 @@ final class BlomstTests: XCTestCase {
         XCTAssertEqual(String(data: domainSeperationTag, encoding: .utf8)!, "BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_NUL_")
     
         
-        let expected = try G2Affine(
+        let expected = P2Affine(
             x: .init(
                 real: .init(uint64s: [
                     0xf0827e0ff0ea4e5a,
@@ -169,8 +182,10 @@ final class BlomstTests: XCTestCase {
         let result = try hashToG2(
             message: message,
             domainSeperationTag: domainSeperationTag
-        )
+        ).p2Affine
    
+        print("expected: \(expected.hex)")
+        print("result: \(result.hex)")
         XCTAssertBytesEqual(result, expected, passOnPatternNonIdentical: true, haltOnPatternNonIdentical: true)
         /*
                 assert_eq!(hash_to_g2(&message[..], &dst).into_affine(), result);
