@@ -22,6 +22,12 @@ public struct P2Affine: Equatable, DataSerializable, DataRepresentable {
 }
 
 public extension P2Affine {
+    init(x: Fp2, y: Fp2) {
+        self.init(storage: .init(x: x.storage, y: y.storage))
+    }
+}
+
+public extension P2Affine {
     init<D>(data: D) throws where D : ContiguousBytes {
         try self.init(storage: .init(data: data))
     }
@@ -32,6 +38,14 @@ public extension P2Affine {
         withUnsafeLowLevelAccess {
             blst_p2_affine_in_g2($0)
         }
+    }
+    
+    var x: Fp2 {
+        .init(storage: storage.x)
+    }
+    
+    var y: Fp2 {
+        .init(storage: storage.y)
     }
 }
 
@@ -79,6 +93,22 @@ internal extension P2Affine.Storage {
         try data.withUnsafeBytes { inBytes in
             guard blst_p2_deserialize(&lowLevel, inBytes.baseAddress) == BLST_SUCCESS else {
                 throw Error.failedToDeserializeFromBytes
+            }
+        }
+        self.init(lowLevel: lowLevel)
+    }
+    
+    var x: Fp2.Storage {
+        .init(lowLevel: lowLevel.x)
+    }
+    var y: Fp2.Storage {
+        .init(lowLevel: lowLevel.y)
+    }
+    
+    convenience init(x: Fp2.Storage, y: Fp2.Storage) {
+        let lowLevel = x.withUnsafeLowLevelAccess { x_ in
+            y.withUnsafeLowLevelAccess { y_ in
+                LowLevel(x: x_.pointee, y: y_.pointee)
             }
         }
         self.init(lowLevel: lowLevel)

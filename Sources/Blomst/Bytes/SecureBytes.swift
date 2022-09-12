@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import BytePattern
 
 struct SecureBytes {
     @usableFromInline

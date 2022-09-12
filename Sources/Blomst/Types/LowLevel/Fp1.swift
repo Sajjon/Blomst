@@ -7,8 +7,9 @@
 
 import Foundation
 import BLST
+import BytePattern
 
-public struct Fp1: Equatable {
+public struct Fp1: Equatable, CustomStringConvertible, DataSerializable {
     internal let storage: Storage
     init(storage: Storage) {
         self.storage = storage
@@ -30,6 +31,18 @@ public extension Fp1 {
     
     init(uint32s: [UInt32]) {
         self.init(storage: .init(uint32s: uint32s))
+    }
+}
+
+public extension Fp1 {
+    var description: String {
+        hex()
+    }
+}
+
+public extension Fp1 {
+    func toData() -> Data {
+        storage.toData()
     }
 }
 
@@ -66,7 +79,7 @@ public extension Fp1 {
 }
 
 internal extension Fp1 {
-    final class Storage: Equatable, ExpressibleByIntegerLiteral, AdditiveArithmetic {
+    final class Storage: Equatable, ExpressibleByIntegerLiteral, AdditiveArithmetic, DataSerializable {
         typealias LowLevel = blst_fp
         private let lowLevel: LowLevel
         internal init(lowLevel: LowLevel) {
@@ -83,9 +96,12 @@ internal extension Fp1.Storage {
     
     convenience init(uint64s: [UInt64]) {
         precondition(uint64s.count == 6)
-        var uint64s = uint64s
-        var lowLevel = LowLevel()
-        blst_fp_from_uint64(&lowLevel, &uint64s)
+//        var uint64s = uint64s
+        let lowLevel = uint64s.withUnsafeBufferPointer {
+            var lowLevel = LowLevel()
+            blst_fp_from_uint64(&lowLevel, $0.baseAddress)
+            return lowLevel
+        }
         self.init(lowLevel: lowLevel)
     }
     
@@ -107,8 +123,8 @@ internal extension Fp1.Storage {
      
         var l = lhs.lowLevel
         var r = rhs.lowLevel
-        return withUnsafeBytes(of: &l) { lBytes in
-            withUnsafeBytes(of: &r) { rBytes in
+        return Swift.withUnsafeBytes(of: &l) { lBytes in
+            Swift.withUnsafeBytes(of: &r) { rBytes in
                 safeCompare(lBytes, rBytes)
             }
         }
@@ -161,5 +177,17 @@ internal extension Fp1.Storage {
                 return .init(lowLevel: ret)
             }
         }
+    }
+}
+
+internal extension Fp1.Storage {
+    func toData() -> Data {
+//        var lowLevel = self.lowLevel
+        let uint64s = Swift.withUnsafeBytes(of: lowLevel.l) {
+//            $0.load(as: [UInt64].self)
+            $0.bindMemory(to: UInt64.self)
+        }
+        return uint64s.map { $0.data }.reduce(Data()) { $0 + $1 }
+//        return Data(bytes)
     }
 }

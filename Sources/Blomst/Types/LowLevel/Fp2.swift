@@ -7,14 +7,30 @@
 
 import Foundation
 import BLST
+import BytePattern
 
-public struct Fp2: Equatable {
+public struct Fp2: Equatable, CustomStringConvertible, DataSerializable {
     internal let storage: Storage
     init(storage: Storage) {
         self.storage = storage
     }
 }
 
+public extension Fp2 {
+    
+    func toData() -> Data {
+        storage.toData()
+    }
+    var description: String {
+        hex()
+    }
+}
+
+public extension Fp2 {
+    init(real: Fp1, imaginary: Fp1) {
+        self.init(storage: .init(real: real.storage, imaginary: imaginary.storage))
+    }
+}
 public extension Fp2 {
     var real: Fp1 {
         storage.real
@@ -33,12 +49,26 @@ internal extension Fp2 {
 
 
 internal extension Fp2 {
-    final class Storage: Equatable {
+    final class Storage: Equatable, DataSerializable {
         typealias LowLevel = blst_fp2
         private let lowLevel: LowLevel
         internal init(lowLevel: LowLevel) {
             self.lowLevel = lowLevel
         }
+    }
+}
+
+internal extension Fp2.Storage {
+    convenience init(
+        real: Fp1.Storage,
+        imaginary: Fp1.Storage
+    ) {
+        let lowLevel = real.withUnsafeLowLevelAccess { r in
+            imaginary.withUnsafeLowLevelAccess { i in
+                LowLevel(fp: (r.pointee, i.pointee))
+            }
+        }
+        self.init(lowLevel: lowLevel)
     }
 }
 
@@ -58,8 +88,8 @@ internal extension Fp2.Storage {
     static func ==(lhs: Fp2.Storage, rhs: Fp2.Storage) -> Bool {
         var l = lhs.lowLevel
         var r = rhs.lowLevel
-        return withUnsafeBytes(of: &l) { lBytes in
-            withUnsafeBytes(of: &r) { rBytes in
+        return Swift.withUnsafeBytes(of: &l) { lBytes in
+            Swift.withUnsafeBytes(of: &r) { rBytes in
                 safeCompare(lBytes, rBytes)
             }
         }
@@ -72,5 +102,14 @@ internal extension Fp2.Storage {
     func withUnsafeLowLevelAccess<R>(_ access: (UnsafeMutablePointer<LowLevel>) throws -> R) rethrows -> R {
         var lowLevel = self.lowLevel
         return try access(&lowLevel)
+    }
+}
+
+internal extension Fp2.Storage {
+    func toData() -> Data {
+        var lowLevel = self.lowLevel
+        return Swift.withUnsafeBytes(of: &lowLevel) {
+            Data($0)
+        }
     }
 }

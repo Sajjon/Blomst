@@ -7,6 +7,7 @@
 
 import Foundation
 import BLST
+import BytePattern
 
 public struct Scalar: Equatable, DataSerializable, DataRepresentable {
     internal let storage: Storage
@@ -143,8 +144,8 @@ internal extension Scalar.Storage {
     static func ==(lhs: Scalar.Storage, rhs: Scalar.Storage) -> Bool {
         var l = lhs.lowLevel
         var r = rhs.lowLevel
-        return withUnsafeBytes(of: &l) { lhsBytes in
-            withUnsafeBytes(of: &r) { rhsBytes in
+        return Swift.withUnsafeBytes(of: &l) { lhsBytes in
+            Swift.withUnsafeBytes(of: &r) { rhsBytes in
                 safeCompare(lhsBytes, rhsBytes)
             }
         }
@@ -154,7 +155,7 @@ internal extension Scalar.Storage {
 internal extension Scalar.Storage {
     func toData() -> Data {
         var lowLevel = self.lowLevel
-        return withUnsafeBytes(of: &lowLevel) {
+        return Swift.withUnsafeBytes(of: &lowLevel) {
             Data($0)
         }
     }

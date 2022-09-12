@@ -7,6 +7,7 @@
 
 import Foundation
 import BLST
+import BytePattern
 
 public struct Fr: Equatable {
     internal let storage: Storage
@@ -44,8 +45,8 @@ internal extension Fr.Storage {
     static func ==(lhs: Fr.Storage, rhs: Fr.Storage) -> Bool {
         var l = lhs.lowLevel
         var r = rhs.lowLevel
-        return withUnsafeBytes(of: &l) { lBytes in
-            withUnsafeBytes(of: &r) { rBytes in
+        return Swift.withUnsafeBytes(of: &l) { lBytes in
+            Swift.withUnsafeBytes(of: &r) { rBytes in
                 safeCompare(lBytes, rBytes)
             }
         }

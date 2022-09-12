@@ -1,5 +1,6 @@
 import XCTest
 @testable import Blomst
+import XCTAssertBytesEqual
 
 final class BlomstTests: XCTestCase {
     
@@ -114,6 +115,8 @@ final class BlomstTests: XCTestCase {
         XCTAssertEqual(publicKey.compressedData().hex(), expectedPublicKeyCompressedData.hex())
     }
     
+  
+    
     // https://github.com/eduadiez/bls12_381_ietf/blob/cd18ae1828a084af8cc02f9bd10d3aa36e749c62/src/lib.rs#L219-L319
     func test_sign() async throws {
         let message = Data([72, 101, 108, 108, 111, 33])
@@ -123,11 +126,11 @@ final class BlomstTests: XCTestCase {
             50, 53, 54, 45, 83, 83, 87, 85, 45, 82, 79, 45, 95, 78, 85, 76, 95,
         ])
         XCTAssertEqual(String(data: domainSeperationTag, encoding: .utf8)!, "BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_NUL_")
+    
         
-        /*
-        G2Affine(
+        let expected = try G2Affine(
             x: .init(
-                c0: .init([
+                real: .init(uint64s: [
                     0xf0827e0ff0ea4e5a,
                     0xf67403477c64ca54,
                     0x60105fa92270f03e,
@@ -135,7 +138,7 @@ final class BlomstTests: XCTestCase {
                     0x51f68ccecfdfc76f,
                     0x160a52dda57a6489,
                 ]),
-                c1: .init([
+                imaginary: .init(uint64s: [
                     0x48c5ac798e356233,
                     0xa071167ae6b912b8,
                     0x6a08e106be121b56,
@@ -145,7 +148,7 @@ final class BlomstTests: XCTestCase {
                 ])
             ),
             y: .init(
-                c0: .init([
+                real: .init(uint64s: [
                     0x3d9f81c519fc11b9,
                     0xe7c922037530014e,
                     0xf772e99043078d53,
@@ -153,7 +156,7 @@ final class BlomstTests: XCTestCase {
                     0xc36b0d9b73456be8,
                     0x13faaea8309e22b4,
                 ]),
-                c1: .init([
+                imaginary: .init(uint64s: [
                     0xb6929583cd3550f4,
                     0x560edf8e11692c36,
                     0xd27eea22e71a6e98,
@@ -163,52 +166,17 @@ final class BlomstTests: XCTestCase {
                 ])
             )
         )
-         */
+        let hash = try hashToG2(
+            message: message,
+            domainSeperationTag: domainSeperationTag
+        )
+        let result = hash.affine()
+   
+        XCTAssertBytesEqual(result, expected, passOnPatternNonIdentical: true, haltOnPatternNonIdentical: true)
         /*
-                let result = G2Affine::from_xy_unchecked(
-                    Fq2 {
-                        c0: Fq::from_repr(FqRepr([
-                            0xf0827e0ff0ea4e5a,
-                            0xf67403477c64ca54,
-                            0x60105fa92270f03e,
-                            0x8179958d9ffbbe0f,
-                            0x51f68ccecfdfc76f,
-                            0x160a52dda57a6489,
-                        ]))
-                        .unwrap(),
-                        c1: Fq::from_repr(FqRepr([
-                            0x48c5ac798e356233,
-                            0xa071167ae6b912b8,
-                            0x6a08e106be121b56,
-                            0xea9d2081cd7255a6,
-                            0xbfb67f385b878dfa,
-                            0x760b83bfc9b79d9,
-                        ]))
-                        .unwrap(),
-                    },
-                    Fq2 {
-                        c0: Fq::from_repr(FqRepr([
-                            0x3d9f81c519fc11b9,
-                            0xe7c922037530014e,
-                            0xf772e99043078d53,
-                            0x1deebe94e9dac409,
-                            0xc36b0d9b73456be8,
-                            0x13faaea8309e22b4,
-                        ]))
-                        .unwrap(),
-                        c1: Fq::from_repr(FqRepr([
-                            0xb6929583cd3550f4,
-                            0x560edf8e11692c36,
-                            0xd27eea22e71a6e98,
-                            0xc7bdee8f51df6fd5,
-                            0xb100ef57a9208cf3,
-                            0x2aa3e3219450a96,
-                        ]))
-                        .unwrap(),
-                    },
-                );
                 assert_eq!(hash_to_g2(&message[..], &dst).into_affine(), result);
-                // edu@dappnode.io
+                
+            // edu@dappnode.io
                 let message = [
                     101, 100, 117, 64, 100, 97, 112, 112, 110, 111, 100, 101, 46, 105, 111,
                 ];

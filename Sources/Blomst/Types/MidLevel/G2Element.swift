@@ -22,6 +22,12 @@ public struct G2Element: Equatable {
 }
 
 public extension G2Element {
+    func affine() -> G2Affine {
+        try! .init(p2Affine: p2.affine())
+    }
+}
+
+public extension G2Element {
     enum Error: Swift.Error {
         case notInGroup
     }

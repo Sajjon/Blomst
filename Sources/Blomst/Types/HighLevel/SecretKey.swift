@@ -8,6 +8,7 @@
 import Foundation
 import CryptoKit
 import BLST
+import BytePattern
 
 public struct SecretKey: Equatable, DataSerializable, DataRepresentable {
     private let scalar: Scalar
