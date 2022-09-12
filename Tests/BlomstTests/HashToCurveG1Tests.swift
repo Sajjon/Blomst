@@ -20,39 +20,66 @@ final class HashToCurveG1Tests: XCTestCase {
     
     func test_fp1_from_data_then_to_data_roundtrip() throws {
         let data = try Data(hex: "184bb665c37ff561a89ec2122dd343f20e0f4cbcaec84e3c3052ea81d1834e192c426074b02ed3dca4e7676ce4ce48ba")
-        let fp = try Fp1(data: data)
-        XCTAssertBytesEqual(data, fp.toData())
+        let fp = try Fp1(bigEndian: data)
+        XCTAssertBytesEqual(
+            fp.toData(),
+            try! Data(hex: "3e922090635c8937de40a507546e27e613d5429507169353e884c93ee9cef688c4be45837e1fd02607fb9b8d29ed3d42")
+        )
+        
     }
     
-    func test_hash_to_curve_g1_NU() throws {
-        try doTestSuite(name: "BLS12381G1_XMD_SHA-256_SSWU_NU_") { suite, test, testIndex in
-            print("🔮 testing vector at: \(testIndex)")
-            let message = try test.message()
-            let domainSeperationTag = try suite.domainSeparationTag()
-           
-            let maybeResult: G1Affine? = try suite.operation == .hash ?
-                hashToG1(
-                    message: message,
-                    domainSeperationTag: domainSeperationTag,
-                    augmentation: .init()
-                ) : (suite.operation == .encode ? encodeToG1(message: message, domainSeperationTag: domainSeperationTag, augmentation: .init()) : nil)
-            
-            let result = try XCTUnwrap(maybeResult)
-            let expected = try test.expected()
-            print("result: \(String(describing: result))")
-            print("expected: \(String(describing: expected))")
-            print("expected.x: \(String(describing: test.P.x))")
-            print("expected.y: \(String(describing: test.P.y))")
-//            XCTAssertBytesEqual(result, expected)
-            XCTAssertEqual(result, expected)
-        }
+    func test_hash_to_curve_g1_RO() throws {
+        try doTest(
+            name: "BLS12381G1_XMD_SHA-256_SSWU_RO_",
+            reverseVectorOrder: false
+        )
+ 
+    }
+    
+    func test_hash_to_curve_g1_NU_which_encodes() throws {
+        try doTest(
+            name: "BLS12381G1_XMD_SHA-256_SSWU_NU_",
+            reverseVectorOrder: false
+        )
     }
 
 }
 
 private extension HashToCurveG1Tests {
+    
+    func doTest(
+        name: String,
+        reverseVectorOrder: Bool = false
+    ) throws {
+        
+        try doTestSuite(
+            name: name,
+            reverseVectorOrder: reverseVectorOrder
+        ) { suite, test, testIndex in
+            print("🔮 testing vector at: \(testIndex)")
+            let message = try test.message()
+            let dst = try suite.domainSeparationTag()
+            
+            let expected = try test.expected()
+            print("expected: \(expected)")
+            
+            let result: G1Affine
+            switch suite.operation {
+            case .encode:
+                result = try encodeToG1(message: message, domainSeperationTag: dst)
+            case .hash:
+                result = try hashToG1(message: message, domainSeperationTag: dst)
+            }
+       
+            print("result: \(result)")
+            XCTAssertBytesEqual(result.x.toData(), expected.x.toData(), "x differ")
+            XCTAssertBytesEqual(result.y.toData(), expected.y.toData(), "y differ")
+        }
+    }
+    
     func doTestSuite(
         name: String,
+        reverseVectorOrder: Bool = false,
         testVector: (HashToCurveG1TestSuite, HashToCurveG1TestSuite.Vector, Int) throws -> Void,
         line: UInt = #line
     ) throws {
@@ -60,6 +87,7 @@ private extension HashToCurveG1Tests {
             bundleType: Self.self,
             jsonName: name,
             decodeAs: HashToCurveG1TestSuite.self,
+            reverseVectorOrder: reverseVectorOrder,
             testVectorFunction: testVector
         )
     }
@@ -101,7 +129,7 @@ private extension HashToCurveG1Tests {
  */
 
 protocol Point2DRepresentable {
-    associatedtype Magnitude: DataRepresentable
+    associatedtype Magnitude: FromBigEndianBytes
     var x: Magnitude { get }
     var y: Magnitude { get }
     init(x: Magnitude, y: Magnitude) throws
@@ -109,8 +137,11 @@ protocol Point2DRepresentable {
 extension G1Affine: Point2DRepresentable {
     typealias Magnitude = Fp1
 }
+extension P1Affine: Point2DRepresentable {
+    typealias Magnitude = Fp1
+}
 
-typealias HashToCurveG1TestSuite = HashToCurveTestSuite<G1Affine>
+typealias HashToCurveG1TestSuite = HashToCurveTestSuite<P1Affine>
 struct HashToCurveTestSuite<Element: Point2DRepresentable>: CipherSuite {
     
     let L: String
@@ -148,15 +179,14 @@ struct HashToCurveTestSuite<Element: Point2DRepresentable>: CipherSuite {
             func element() throws -> Element {
                 let xData = try Data(hex: x)
                 let yData = try Data(hex: y)
-                let xPart = try Element.Magnitude(data: xData)
-                let yPart = try Element.Magnitude(data: yData)
+                let xPart = try Element.Magnitude(bigEndian: xData)
+                let yPart = try Element.Magnitude(bigEndian: yData)
                 let element = try Element(x: xPart, y: yPart)
-                print("✨ xData: \(xData.hex), xPart: \(xPart), element: \(element)")
                 return element
             }
         }
         let P: DecodableElement
-        let Q: DecodableElement
+//        let Q: DecodableElement
         let msg: String
         let u: [String]
         

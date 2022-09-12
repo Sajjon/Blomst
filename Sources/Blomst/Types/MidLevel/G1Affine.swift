@@ -12,7 +12,12 @@ import BLST
 /// guaranteed to be in the group `G1`.
 public struct G1Affine: Equatable, CustomStringConvertible {
     public var description: String {
-        "G1Affine(x: \(x), y: \(y))"
+        """
+        P1Affine(
+            x: \(x)
+            y: \(y)
+        )
+        """
     }
     internal let p1Affine: P1Affine
    

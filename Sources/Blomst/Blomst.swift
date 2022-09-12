@@ -106,6 +106,7 @@ public func hashToG1(
                     augBytes.count
                 )
                 let p1 = P1(lowLevel: out)
+                print("hashToG1 result: \(p1)")
                 return try G1Affine(p1: p1)
             }
         }
@@ -118,12 +119,12 @@ public func encodeToG1(
     domainSeperationTag: DomainSeperationTag,
     augmentation: Data = .init()
 ) throws -> G1Affine {
-    try message.withUnsafeBytes { msgBytes in
+    return try message.withUnsafeBytes { msgBytes in
         try domainSeperationTag.withUnsafeBytes { dstBytes in
             try augmentation.withUnsafeBytes { augBytes in
-                var out = blst_p1()
+                var result = blst_p1()
                 blst_encode_to_g1(
-                    &out,
+                    &result,
                     msgBytes.baseAddress,
                     msgBytes.count,
                     dstBytes.baseAddress,
@@ -131,7 +132,8 @@ public func encodeToG1(
                     augBytes.baseAddress,
                     augBytes.count
                 )
-                let p1 = P1(lowLevel: out)
+                let p1 = P1(lowLevel: result)
+                print("encodeToG1 result: \(p1)")
                 return try G1Affine(p1: p1)
             }
         }

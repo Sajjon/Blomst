@@ -11,7 +11,12 @@ import BLST
 /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`
 public struct P1Affine: Equatable, DataSerializable, DataRepresentable, CustomStringConvertible {
     public var description: String {
-        "P1Affine(x: \(x), y: \(y))"
+        """
+        P1Affine(
+            x: \(x)
+            y: \(y)
+        )
+        """
     }
     internal let storage: Storage
     
@@ -135,26 +140,7 @@ internal extension P1Affine.Storage {
     static func ==(lhs: P1Affine.Storage, rhs: P1Affine.Storage) -> Bool {
         var lhsPoint = lhs.lowLevel
         var rhsPoint = rhs.lowLevel
-       
-        let bytePatternFinder = BytePatternFinder()
-        if let pattern = bytePatternFinder.find(lhs: lhs, rhs: rhs) {
-            if pattern == .identical {
-                if !blst_p1_affine_is_equal(&lhsPoint, &rhsPoint) {
-                    fatalError("identical per byte, but not using `blst_p1_affine_is_equal`")
-                } else {
-                   return true
-                }
-            } else {
-                fatalError("Aha! Almost same - pattern: \(pattern)")
-            }
-        } else {
-            print("lhs: \(lhs.hex) != \(rhs.hex)")
-            if blst_p1_affine_is_equal(&lhsPoint, &rhsPoint) {
-                fatalError("Hmm `blst_p1_affine_is_equal` says equal, but does not look to be..")
-            } else {
-                return false
-            }
-        }
+        return blst_p1_affine_is_equal(&lhsPoint, &rhsPoint)
     }
 }
 

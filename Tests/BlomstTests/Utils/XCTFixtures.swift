@@ -46,8 +46,8 @@ extension XCTestCase {
         jsonName: String,
         file: StaticString = #file,
         line: UInt = #line,
-//        decode: (JSONDecoder) throws -> some TestSuite<T>,
         decodeAs: S.Type,
+        reverseVectorOrder: Bool = false,
         testVectorFunction: (S, S.Test, Int) throws -> Void
     ) throws {
 
@@ -69,10 +69,16 @@ extension XCTestCase {
         }
 
         let decoder = JSONDecoder()
-//        let testSuite = try decode(decoder)
         let testSuite = try decoder.decode(S.self, from: data)
-        for (testIndex, test) in testSuite.tests.enumerated() {
-            try testVectorFunction(testSuite, test, testIndex)
+       
+        if reverseVectorOrder {
+            for (testIndex, test) in testSuite.tests.enumerated().reversed() {
+                 try testVectorFunction(testSuite, test, testIndex)
+             }
+        } else {
+             for (testIndex, test) in testSuite.tests.enumerated() {
+                 try testVectorFunction(testSuite, test, testIndex)
+             }
         }
     }
 }

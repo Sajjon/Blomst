@@ -10,8 +10,18 @@ import BLST
 
 /// A wrapper of `BLS12-381` point, having three coordinates: `x, y, z`.
 /// **NOT NECESSARILY IN THE GROUP **`G1`, for that use `G1Element`
-public struct P1: Equatable, DataSerializable, AffineSerializable, DataRepresentable {
+public struct P1: Equatable, DataSerializable, AffineSerializable, DataRepresentable, CustomStringConvertible {
     internal let storage: Storage
+    
+    public var description: String {
+        """
+        P1(
+            x: \(x)
+            y: \(y)
+            z: \(z)
+        )
+        """
+    }
     
     internal init(storage: Storage) {
         self.storage = storage

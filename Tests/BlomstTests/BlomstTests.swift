@@ -118,7 +118,7 @@ final class BlomstTests: XCTestCase {
   
     
     // https://github.com/eduadiez/bls12_381_ietf/blob/cd18ae1828a084af8cc02f9bd10d3aa36e749c62/src/lib.rs#L219-L319
-    func test_sign() async throws {
+    func skip_test_sign() async throws {
         let message = Data([72, 101, 108, 108, 111, 33])
         XCTAssertEqual(String(data: message, encoding: .utf8)!, "Hello!")
         let domainSeperationTag = Data([
