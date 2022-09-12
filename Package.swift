@@ -11,7 +11,7 @@ let package = Package(
             targets: ["Blomst"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/sajjon/BytePattern", branch: "main")
+        .package(url: "https://github.com/sajjon/BytePattern", from: "0.0.3")
     ],
     targets: [
         .binaryTarget(
@@ -20,7 +20,11 @@ let package = Package(
         ),
         .target(
             name: "Blomst",
-            dependencies: ["BLST"]),
+            dependencies: [
+                "BLST",
+                .product(name: "BytesMutation", package: "BytePattern"),
+                .product(name: "BytePattern", package: "BytePattern"),
+            ]),
         .testTarget(
             name: "BlomstTests",
             dependencies: [

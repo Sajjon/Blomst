@@ -18,32 +18,6 @@ final class ExpandMessageXMDTests: XCTestCase {
         DefaultXCTAssertBytesEqualParameters.haltOnPatternNonIdentical = true
     }
     
-    
-    
-    func test_single_vector() throws {
-        /*
-         "DST": "QUUX-V01-CS02-with-expander-SHA256-128-long-DST-1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
-         "hash": "SHA256",
-         "k": 128,
-         "name": "expand_message_xmd",
-         "tests": [
-           {
-             "DST_prime": "412717974da474d0f8c420f320ff81e8432adb7c927d9bd082b4fb4d16c0a23620",
-             "len_in_bytes": "0x20",
-             "msg": "",
-             "msg_prime": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000412717974da474d0f8c420f320ff81e8432adb7c927d9bd082b4fb4d16c0a23620",
-             "uniform_bytes": "e8dc0c8b686b7ef2074086fbdd2f30e3f8bfbd3bdf177f73f04b97ce618a3ed3"
-           },
-         */
-        let length: Int = 0x20
-        let message = "".data(using: .utf8)!
-        let dst = "QUUX-V01-CS02-with-expander-SHA256-128-long-DST-1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111".data(using: .utf8)!
-        let expanded = try expandMessageXMD(toLength: length, message: message, domainSeperationTag: dst)
-        let expected = try Data(hex: "e8dc0c8b686b7ef2074086fbdd2f30e3f8bfbd3bdf177f73f04b97ce618a3ed3")
-        XCTAssertBytesEqual(expanded, expected)
-    }
-    
-    
     func test_message_xmd_SHA256_256() throws {
         try doTestSuite(name: "expand_message_xmd_SHA256_256") { suite, test, testIndex in
             print("🔮 testing vector at: \(testIndex)")
@@ -101,7 +75,6 @@ struct XMDTestSuite: TestSuite {
     let k: Int
     let name: String
     let tests: [Test]
-    
     
     func dst(line: UInt = #line) throws -> Data {
         try XCTUnwrap(DST.data(using: .utf8), line: line)

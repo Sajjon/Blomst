@@ -10,7 +10,10 @@ import BLST
 
 /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`
 /// guaranteed to be in the group `G1`.
-public struct G1Affine: Equatable {
+public struct G1Affine: Equatable, CustomStringConvertible {
+    public var description: String {
+        "G1Affine(x: \(x), y: \(y))"
+    }
     internal let p1Affine: P1Affine
    
     init(p1Affine: P1Affine) throws {
@@ -18,6 +21,23 @@ public struct G1Affine: Equatable {
             throw Error.notInGroup
         }
         self.p1Affine = p1Affine
+    }
+    
+    init(p1: P1) throws {
+        try self.init(p1Affine: p1.affine())
+    }
+    
+    public init(x: Fp1, y: Fp1) throws {
+        try self.init(p1Affine: P1Affine(x: x, y: y))
+    }
+}
+
+public extension G1Affine {
+    var x: Fp1 {
+        p1Affine.x
+    }
+    var y: Fp1 {
+        p1Affine.y
     }
 }
 

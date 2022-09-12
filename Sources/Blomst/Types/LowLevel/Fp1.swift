@@ -9,14 +9,24 @@ import Foundation
 import BLST
 import BytePattern
 
-public struct Fp1: Equatable, CustomStringConvertible, DataSerializable {
+public struct Fp1: Equatable, CustomStringConvertible, DataSerializable, DataRepresentable {
     internal let storage: Storage
     init(storage: Storage) {
         self.storage = storage
     }
+    public init<D>(data: D) throws where D : ContiguousBytes {
+        try self.init(storage: .init(data: data))
+    }
+}
+
+internal extension Fp1 {
+    init(lowLevel: Storage.LowLevel) {
+        self.init(storage: .init(lowLevel: lowLevel))
+    }
 }
 
 public extension Fp1 {
+    
     init(mostSignificantUInt64: UInt64) {
         self.init(storage: .init(mostSignificantUInt64: mostSignificantUInt64))
     }
@@ -79,12 +89,35 @@ public extension Fp1 {
 }
 
 internal extension Fp1 {
-    final class Storage: Equatable, ExpressibleByIntegerLiteral, AdditiveArithmetic, DataSerializable {
+    final class Storage: Equatable, ExpressibleByIntegerLiteral, AdditiveArithmetic, DataSerializable, DataRepresentable {
         typealias LowLevel = blst_fp
         private let lowLevel: LowLevel
         internal init(lowLevel: LowLevel) {
             self.lowLevel = lowLevel
         }
+    }
+}
+
+import BytesMutation
+internal extension Fp1.Storage {
+    convenience init<D>(data: D) throws where D : ContiguousBytes {
+        let data = data.swapEndianessOfUInt64sFromBytes()
+        var lowLevel = LowLevel()
+        data.withUnsafeBytes { dataPtr in
+            
+//            let limb0 = dataPtr.load(fromByteOffset: UInt64.byteCount * 0, as: UInt64.self)
+//            let limb1 = dataPtr.load(fromByteOffset: UInt64.byteCount * 1, as: UInt64.self)
+//            let limb2 = dataPtr.load(fromByteOffset: UInt64.byteCount * 2, as: UInt64.self)
+//            let limb3 = dataPtr.load(fromByteOffset: UInt64.byteCount * 3, as: UInt64.self)
+//            let limb4 = dataPtr.load(fromByteOffset: UInt64.byteCount * 4, as: UInt64.self)
+//            let limb5 = dataPtr.load(fromByteOffset: UInt64.byteCount * 5, as: UInt64.self)
+//            lowLevel.l = (limb0, limb1, limb2, limb3, limb4, limb5)
+
+            _ = Swift.withUnsafeMutableBytes(of: &lowLevel.l) { ll in
+                dataPtr.copyBytes(to: ll)
+            }
+        }
+        self.init(lowLevel: lowLevel)
     }
 }
 

@@ -35,6 +35,7 @@ protocol CipherSuite<Vector>: TestSuite where Vector: Decodable, Test == Vector 
     var vectors: [Vector] { get }
 }
 extension CipherSuite {
+    typealias Test = Vector
     var tests: [Test] { vectors }
     var name: String { ciphersuite }
 }

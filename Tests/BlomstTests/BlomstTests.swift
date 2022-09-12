@@ -166,11 +166,10 @@ final class BlomstTests: XCTestCase {
                 ])
             )
         )
-        let hash = try hashToG2(
+        let result = try hashToG2(
             message: message,
             domainSeperationTag: domainSeperationTag
         )
-        let result = hash.affine()
    
         XCTAssertBytesEqual(result, expected, passOnPatternNonIdentical: true, haltOnPatternNonIdentical: true)
         /*

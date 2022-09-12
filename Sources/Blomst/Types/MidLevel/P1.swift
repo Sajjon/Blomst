@@ -16,6 +16,10 @@ public struct P1: Equatable, DataSerializable, AffineSerializable, DataRepresent
     internal init(storage: Storage) {
         self.storage = storage
     }
+    
+    public init(x: Fp1, y: Fp1, z: Fp1) {
+        self.init(storage: .init(x: x, y: y, z: z))
+    }
 }
 
 
@@ -98,6 +102,17 @@ internal extension P1 {
             withUnsafeLowLevelAccess {
                 precondition(blst_p1_on_curve($0))
             }
+        }
+        
+        public convenience init(x: Fp1, y: Fp1, z: Fp1) {
+            let lowLevel = x.withUnsafeLowLevelAccess { xp in
+                y.withUnsafeLowLevelAccess { yp in
+                    z.withUnsafeLowLevelAccess { zp in
+                        LowLevel(x: xp.pointee, y: yp.pointee, z: zp.pointee)
+                    }
+                }
+            }
+            self.init(lowLevel: lowLevel)
         }
     }
 }

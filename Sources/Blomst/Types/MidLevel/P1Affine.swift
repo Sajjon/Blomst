@@ -9,7 +9,10 @@ import Foundation
 import BLST
 
 /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`
-public struct P1Affine: Equatable, DataSerializable, DataRepresentable {
+public struct P1Affine: Equatable, DataSerializable, DataRepresentable, CustomStringConvertible {
+    public var description: String {
+        "P1Affine(x: \(x), y: \(y))"
+    }
     internal let storage: Storage
     
     internal init(storage: Storage) {
@@ -18,6 +21,20 @@ public struct P1Affine: Equatable, DataSerializable, DataRepresentable {
     
     internal init(lowLevel: Storage.LowLevel) {
         self.init(storage: .init(lowLevel: lowLevel))
+    }
+    
+    public init(x: Fp1, y: Fp1) {
+        self.init(storage: .init(x: x, y: y))
+    }
+}
+
+
+public extension P1Affine {
+    var x: Fp1 {
+        storage.x
+    }
+    var y: Fp1 {
+        storage.y
     }
 }
 
@@ -61,12 +78,31 @@ public extension P1Affine {
 internal extension P1Affine {
     /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`.
     final class Storage: Equatable, DataSerializable, DataRepresentable {
+        
         internal typealias LowLevel = blst_p1_affine
         private let lowLevel: LowLevel
         
         internal init(lowLevel: LowLevel) {
             self.lowLevel = lowLevel
         }
+        
+        public convenience init(x: Fp1, y: Fp1) {
+            let lowLevel = x.withUnsafeLowLevelAccess { xp in
+                y.withUnsafeLowLevelAccess { yp in
+                    LowLevel(x: xp.pointee, y: yp.pointee)
+                }
+            }
+            self.init(lowLevel: lowLevel)
+         }
+    }
+}
+
+internal extension P1Affine.Storage {
+    var x: Fp1 {
+        .init(lowLevel: lowLevel.x)
+    }
+    var y: Fp1 {
+        .init(lowLevel: lowLevel.y)
     }
 }
 
@@ -94,11 +130,31 @@ internal extension P1Affine.Storage {
 }
 
 // MARK: Storage + Equatable
+import BytePattern
 internal extension P1Affine.Storage {
     static func ==(lhs: P1Affine.Storage, rhs: P1Affine.Storage) -> Bool {
         var lhsPoint = lhs.lowLevel
         var rhsPoint = rhs.lowLevel
-        return blst_p1_affine_is_equal(&lhsPoint, &rhsPoint)
+       
+        let bytePatternFinder = BytePatternFinder()
+        if let pattern = bytePatternFinder.find(lhs: lhs, rhs: rhs) {
+            if pattern == .identical {
+                if !blst_p1_affine_is_equal(&lhsPoint, &rhsPoint) {
+                    fatalError("identical per byte, but not using `blst_p1_affine_is_equal`")
+                } else {
+                   return true
+                }
+            } else {
+                fatalError("Aha! Almost same - pattern: \(pattern)")
+            }
+        } else {
+            print("lhs: \(lhs.hex) != \(rhs.hex)")
+            if blst_p1_affine_is_equal(&lhsPoint, &rhsPoint) {
+                fatalError("Hmm `blst_p1_affine_is_equal` says equal, but does not look to be..")
+            } else {
+                return false
+            }
+        }
     }
 }
 

@@ -19,6 +19,10 @@ public struct G2Affine: Equatable, DataSerializable {
         }
         self.p2Affine = p2Affine
     }
+    
+    init(p2: P2) throws {
+        try self.init(p2Affine: p2.affine())
+    }
 }
 
 public extension G2Affine {
