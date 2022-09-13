@@ -115,13 +115,13 @@ internal extension P1 {
     /// A wrapper of `BLS12-381` point, having three coordinates: `x, y, z`.
     final class Storage: Equatable, UncompressedDataSerializable, UncompressedDataRepresentable, ProjectivePoint {
         static func + (lhs: P1.Storage, rhs: P1.Storage) -> P1.Storage {
-            var result = LowLevel()
             lhs.withUnsafeLowLevelAccess { l in
                 rhs.withUnsafeLowLevelAccess { r in
+                    var result = LowLevel()
                     blst_p1_add(&result, l, r)
+                    return P1.Storage(lowLevel: result)
                 }
             }
-            return P1.Storage(lowLevel: result)
         }
         
         

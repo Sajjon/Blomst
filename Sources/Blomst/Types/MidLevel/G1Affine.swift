@@ -15,9 +15,10 @@ import BLST
 public struct G1Affine:
     Equatable,
     CustomStringConvertible,
-    UncompressedDataRepresentable,
     UncompressedDataSerializable,
+    UncompressedDataRepresentable,
     CompressedDataSerializable,
+    CompressedDataRepresentable,
     AffinePoint
 {
     
@@ -109,6 +110,10 @@ public extension G1Affine {
     /// From uncompressed data
     init(uncompressedData: some ContiguousBytes) throws {
         try self.init(p1Affine: .init(uncompressedData: uncompressedData))
+    }
+    
+    init(compressedData: some ContiguousBytes) throws {
+        try self.init(p1Affine: .init(compressedData: compressedData))
     }
     
 }

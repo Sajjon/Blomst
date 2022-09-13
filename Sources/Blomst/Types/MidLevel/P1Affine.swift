@@ -15,6 +15,7 @@ public struct P1Affine:
     UncompressedDataSerializable,
     CompressedDataSerializable,
     UncompressedDataRepresentable,
+    CompressedDataRepresentable,
     CustomStringConvertible
 {
     public var description: String {
@@ -58,6 +59,9 @@ public extension P1Affine {
     init(uncompressedData: some ContiguousBytes) throws {
         try self.init(storage: .init(uncompressedData: uncompressedData))
     }
+    init(compressedData: some ContiguousBytes) throws {
+        try self.init(storage: .init(compressedData: compressedData))
+    }
 }
 
 public extension P1Affine {
@@ -100,7 +104,14 @@ public extension P1Affine {
 // MARK: Storage
 internal extension P1Affine {
     /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`.
-    final class Storage: Equatable, UncompressedDataSerializable, UncompressedDataRepresentable, CompressedDataSerializable, AffinePoint {
+    final class Storage:
+        Equatable,
+        UncompressedDataSerializable,
+        UncompressedDataRepresentable,
+        CompressedDataSerializable,
+        CompressedDataRepresentable,
+        AffinePoint
+    {
         
         internal typealias LowLevel = blst_p1_affine
         private let lowLevel: LowLevel
@@ -129,7 +140,6 @@ internal extension P1Affine.Storage {
     }
     
     var isInfinity: Bool {
-//        P1(storage: .init(affine: self)).isInfinity
         P1.Storage.init(affine: self).isInfinity
     }
 }
@@ -142,6 +152,16 @@ internal extension P1Affine.Storage {
         var lowLevel = LowLevel()
         try uncompressedData.withUnsafeBytes { inBytes in
             guard blst_p1_deserialize(&lowLevel, inBytes.baseAddress) == BLST_SUCCESS else {
+                throw Error.failedToDeserializeFromBytes
+            }
+        }
+        self.init(lowLevel: lowLevel)
+    }
+    
+    convenience init(compressedData: some ContiguousBytes) throws {
+        var lowLevel = LowLevel()
+        try compressedData.withUnsafeBytes { inBytes in
+            guard blst_p1_uncompress(&lowLevel, inBytes.baseAddress) == BLST_SUCCESS else {
                 throw Error.failedToDeserializeFromBytes
             }
         }

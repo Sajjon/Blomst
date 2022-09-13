@@ -49,8 +49,11 @@ public struct Fp1:
         self.storage = storage
     }
 
-    public init<D>(bigEndian: D) throws where D: ContiguousBytes {
+    public init(bigEndian: some ContiguousBytes) throws {
         try self.init(storage: .init(bigEndian: bigEndian))
+    }
+    public init(littleEndian: some ContiguousBytes) throws {
+        try self.init(storage: .init(littleEndian: littleEndian))
     }
 }
 
@@ -142,7 +145,7 @@ internal extension Fp1 {
 
 internal extension Fp1.Storage {
     
-    convenience init<D>(bigEndian: D) throws where D: ContiguousBytes {
+    convenience init(bigEndian: some ContiguousBytes) throws {
         var lowLevel = LowLevel()
         bigEndian.withUnsafeBytes { be in
             blst_fp_from_bendian(&lowLevel, be.baseAddress)
@@ -150,6 +153,13 @@ internal extension Fp1.Storage {
         self.init(lowLevel: lowLevel)
     }
 
+    convenience init(littleEndian: some ContiguousBytes) throws {
+        var lowLevel = LowLevel()
+        littleEndian.withUnsafeBytes { le in
+            blst_fp_from_lendian(&lowLevel, le.baseAddress)
+        }
+        self.init(lowLevel: lowLevel)
+    }
 }
 internal extension Fp1.Storage {
     
@@ -243,13 +253,47 @@ internal extension Fp1.Storage {
 }
 
 internal extension Fp1.Storage {
-    func uncompressedData() throws -> Data {
-//        var lowLevel = self.lowLevel
+   
+    /// This function yield identical result as
+    ///
+    /// func uncompressedData() throws -> Data {
+    ///     var lowLevelCopy = self.lowLevel
+    ///     var data = Data.init(repeating: 0xff, count: 48)
+    ///
+    ///     Swift.withUnsafePointer(to: &lowLevelCopy) { llc in
+    ///         data.withUnsafeMutableBytes { target in
+    ///             let source = UnsafeRawBufferPointer.init(start: llc, count: 48)
+    ///             target.copyBytes(from: source)
+    ///         }
+    ///     }
+    ///
+    ///     return data
+    /// }
+    func uncompressedDataUsingUInt64() throws -> Data {
         let uint64s = Swift.withUnsafeBytes(of: lowLevel.l) {
-//            $0.load(as: [UInt64].self)
             $0.bindMemory(to: UInt64.self)
         }
-        return uint64s.map { $0.data }.reduce(Data()) { $0 + $1 }
-//        return Data(bytes)
+        return uint64s.map { $0.bigEndian.data }.reduce(Data()) { $0 + $1 }
+    }
+    
+    /// This function yields identical result as
+    /// func uncompressedDataUsingUInt64() throws -> Data {
+    ///     let uint64s = Swift.withUnsafeBytes(of: lowLevel.l) {
+    ///         $0.bindMemory(to: UInt64.self)
+    ///     }
+    ///     return uint64s.map { $0.bigEndian.data }.reduce(Data()) { $0 + $1 }
+    /// }
+    func uncompressedData() throws -> Data {
+        var lowLevelCopy = self.lowLevel
+        var data = Data.init(repeating: 0xff, count: 48)
+        
+        Swift.withUnsafePointer(to: &lowLevelCopy) { llc in
+            data.withUnsafeMutableBytes { target in
+                let source = UnsafeRawBufferPointer.init(start: llc, count: 48)
+                target.copyBytes(from: source)
+            }
+        }
+        
+        return data
     }
 }
