@@ -14,51 +14,87 @@
 //===----------------------------------------------------------------------===//
 import XCTest
 
-//struct WycheproofTest<T: Codable>: Codable {
-//    let algorithm: String
-//    let numberOfTests: UInt32
-//    let testGroups: [T]
-//}
-
-protocol TestSuite<Test>: Decodable where Test: Decodable {
+protocol TestSuite<Test> {
     associatedtype Test
     var name: String { get }
     var tests: [Test] { get }
 }
-//public struct AnyTestSuite<Test: Decodable> {
-//    public let name: String
-//    public let tests: [Test]
-//}
-protocol CipherSuite<Vector>: TestSuite where Vector: Decodable, Test == Vector {
+
+protocol CipherSuite<Vector>: TestSuite where Test == Vector {
     associatedtype Vector
+    associatedtype Test
     var ciphersuite: String { get }
     var vectors: [Vector] { get }
 }
 extension CipherSuite {
-    typealias Test = Vector
     var tests: [Test] { vectors }
     var name: String { ciphersuite }
 }
 
 extension XCTestCase {
-    func doTestFixture<S: TestSuite>(
-        bundleType: AnyObject,
-        jsonName: String,
-        file: StaticString = #file,
-        line: UInt = #line,
+    func doTestJSONFixture<S: TestSuite & Decodable>(
+        name: String,
         decodeAs: S.Type,
         reverseVectorOrder: Bool = false,
-        testVectorFunction: (S, S.Test, Int) throws -> Void
+        testVectorFunction: (S, S.Test, Int) throws -> Void,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) throws where S.Test: Decodable {
+        try _doTestSuite(
+            fileName: name,
+            fileExtension: "json",
+            suiteFromData: { try JSONDecoder().decode(S.self, from: $0) },
+            testSuite: { suite in
+                if reverseVectorOrder {
+                    for (testIndex, test) in suite.tests.enumerated().reversed() {
+                         try testVectorFunction(suite, test, testIndex)
+                     }
+                } else {
+                     for (testIndex, test) in suite.tests.enumerated() {
+                         try testVectorFunction(suite, test, testIndex)
+                     }
+                }
+            },
+            file: file,
+            line: line
+        )
+    }
+    
+    func doTestDATFixture(
+        name: String,
+        testSuite: (Data) throws -> Void,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) throws {
+        try _doTestSuite(
+            fileName: name,
+            fileExtension: "dat",
+            suiteFromData: { $0 },
+            testSuite: testSuite,
+            file: file,
+            line: line
+        )
+    }
+    
+}
+    
+private extension XCTestCase {
+    func _doTestSuite<Suite>(
+        fileName: String,
+        fileExtension: String,
+        suiteFromData: (Data) throws -> Suite,
+        testSuite: (Suite) throws -> Void,
+        file: StaticString = #file,
+        line: UInt = #line
     ) throws {
 
         let testsDirectory: String = URL(fileURLWithPath: "\(#file)").pathComponents.dropLast(3).joined(separator: "/")
         
         let fileURL = try XCTUnwrap(
-            URL(fileURLWithPath: "\(testsDirectory)/TestVectors/\(jsonName).json"),
+            URL(fileURLWithPath: "\(testsDirectory)/TestVectors/\(fileName).\(fileExtension)"),
             file: file,
             line: line
         )
-
         let data: Data
         
         do {
@@ -68,17 +104,8 @@ extension XCTestCase {
             return
         }
 
-        let decoder = JSONDecoder()
-        let testSuite = try decoder.decode(S.self, from: data)
+        let suite = try suiteFromData(data)
        
-        if reverseVectorOrder {
-            for (testIndex, test) in testSuite.tests.enumerated().reversed() {
-                 try testVectorFunction(testSuite, test, testIndex)
-             }
-        } else {
-             for (testIndex, test) in testSuite.tests.enumerated() {
-                 try testVectorFunction(testSuite, test, testIndex)
-             }
-        }
+        try testSuite(suite)
     }
 }

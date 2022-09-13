@@ -37,8 +37,8 @@ final class BlomstTests: XCTestCase {
     func test_assert_that_an_error_is_throws_when_deserializing_a_point_on_curve_but_not_in_g1() throws {
         let bytesHex = "0x8123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         let bytes = try Data(hex: bytesHex)
-        XCTAssertThrowsError(try G1Element(p1: P1(data: bytes)))  { anError in
-            guard let error = anError as? G1Element.Error else {
+        XCTAssertThrowsError(try G1Projective(p1: P1(data: bytes)))  { anError in
+            guard let error = anError as? G1Projective.Error else {
                 return XCTFail("Wrong error type")
             }
             XCTAssertEqual(error, .notInGroup)
@@ -126,7 +126,6 @@ final class BlomstTests: XCTestCase {
         let fromHex = try Fp1(bigEndian: Data(hex: "f0827e0ff0ea4e5af67403477c64ca5460105fa92270f03e8179958d9ffbbe0f51f68ccecfdfc76f160a52dda57a6489"))
         XCTAssertBytesEqual(fromHex.toData(), fromInts.toData(), haltOnPatternNonIdentical: true)
         XCTAssertEqual(fromHex, fromInts)
-        
     }
   
     

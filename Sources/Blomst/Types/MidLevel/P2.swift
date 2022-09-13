@@ -8,8 +8,8 @@
 import Foundation
 import BLST
 
-/// A wrapper of `BLS12-381` point, having three coordinates: `x, y, z`.
-/// /// **NOT NECESSARILY IN THE GROUP **`G2`, for that use `G2Element`
+/// A wrapper of `BLS12-381` **projective** point, having three coordinates: `x, y, z`.
+/// /// **NOT NECESSARILY IN THE GROUP **`G2`, for that use `G2Projective`
 public struct P2: Equatable, DataSerializable, AffineSerializable {
     internal let storage: Storage
     

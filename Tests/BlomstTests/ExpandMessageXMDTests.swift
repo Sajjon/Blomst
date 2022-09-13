@@ -53,9 +53,8 @@ private extension ExpandMessageXMDTests {
         testVector: (XMDTestSuite, XMDTestSuite.Test, Int) throws -> Void,
         line: UInt = #line
     ) throws {
-        try doTestFixture(
-            bundleType: Self.self,
-            jsonName: name,
+        try doTestJSONFixture(
+            name: name,
             decodeAs: XMDTestSuite.self,
             testVectorFunction: testVector
         )
@@ -69,7 +68,7 @@ private extension ExpandMessageXMDTests {
 ///     "name": "expand_message_xmd",
 ///     "tests": [..]
 /// }
-struct XMDTestSuite: TestSuite {
+struct XMDTestSuite: TestSuite, Decodable {
     let DST: String
     let hash: String
     let k: Int

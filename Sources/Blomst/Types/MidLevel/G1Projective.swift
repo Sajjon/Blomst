@@ -8,9 +8,9 @@
 import Foundation
 import BLST
 
-/// A wrapper of `BLS12-381` point, having three coordinates: `x, y, z`,
+/// A wrapper of `BLS12-381` **projective** point, having three coordinates: `x, y, z`,
 /// guaranteed to be in the group `G1`.
-public struct G1Element: Equatable {
+public struct G1Projective: Equatable {
     internal let p1: P1
    
     init(p1: P1) throws {
@@ -21,7 +21,7 @@ public struct G1Element: Equatable {
     }
 }
 
-public extension G1Element {
+public extension G1Projective {
     enum Error: Swift.Error {
         case notInGroup
     }

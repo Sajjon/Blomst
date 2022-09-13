@@ -147,9 +147,8 @@ private extension HashToCurveG1Tests {
         testVector: (HashToCurveTestSuite<Element>, HashToCurveTestSuite<Element>.Vector, Int) throws -> Void,
         line: UInt = #line
     ) throws {
-        try doTestFixture(
-            bundleType: Self.self,
-            jsonName: name,
+        try doTestJSONFixture(
+            name: name,
             decodeAs: HashToCurveTestSuite<Element>.self,
             reverseVectorOrder: reverseVectorOrder,
             testVectorFunction: testVector
@@ -157,7 +156,7 @@ private extension HashToCurveG1Tests {
     }
 }
 
-struct HashToCurveTestSuite<Element>: CipherSuite {
+struct HashToCurveTestSuite<Element>: CipherSuite, Decodable {
     
     let ciphersuite: String
     let dst: String
