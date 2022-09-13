@@ -28,15 +28,11 @@ final class CompressUncompressTests: XCTestCase {
     
     func test_p1_generator() throws {
         let xData = try Data(hex: "1144f72e5d8a469db166f58521e70676db2c6defa37e40da314436a0645f2511037bf2f1a83aa341bafe74514c615fae")
-//        let yData = try Data(hex: "064a3a594868a2a4dab071ff6d880ae0f459c87e11ab01b3454b95a7d6a93f853f6e07f754b6e7933799e0afe2779a56")
-//        let zData = try Data(hex: "08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1")
-        let x = try Fp1(littleEndian: xData)
-//        let y = try Fp1(bigEndian: yData)
-//        let z = try Fp1(bigEndian: zData)
-        
-        dump(x)
-        print("x: \(try! x.uncompressedData().hex)")
-        XCTAssertBytesEqual(try x.uncompressedData(), xData, passOnPatternNonIdentical: true, haltOnPatternNonIdentical: true)
+        let yData = try Data(hex: "064a3a594868a2a4dab071ff6d880ae0f459c87e11ab01b3454b95a7d6a93f853f6e07f754b6e7933799e0afe2779a56")
+        let zData = try Data(hex: "08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1")
+        let x = try Fp1(uncompressedData: xData)
+        let y = try Fp1(uncompressedData: yData)
+        let z = try Fp1(uncompressedData: zData)
         
 //        let expected = P1(
 //            x: x,

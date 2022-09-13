@@ -9,31 +9,10 @@ import Foundation
 import BLST
 import BytePattern
 
-//public protocol Point2DRepresentable {
-//    associatedtype Magnitude
-//    var x: Magnitude { get }
-//    var y: Magnitude { get }
-//    init(x: Magnitude, y: Magnitude) throws
-//}
-//
-//extension G1Affine: Point2DRepresentable {
-//    public typealias Magnitude = Fp1
-//}
-//
-//extension P1Affine: Point2DRepresentable {
-//    public typealias Magnitude = Fp1
-//}
-//
-//
-//extension G2Affine: Point2DRepresentable {
-//    public typealias Magnitude = Fp2
-//}
-//
-//extension P2Affine: Point2DRepresentable {
-//    public typealias Magnitude = Fp2
-//}
-
 public protocol FromBigEndianBytes {
+    init<D>(bigEndian: D) throws where D: ContiguousBytes
+}
+public protocol FromLittleEndianBytes {
     init<D>(bigEndian: D) throws where D: ContiguousBytes
 }
 
@@ -42,7 +21,9 @@ public struct Fp1:
     PointComponentProtocol,
     CustomStringConvertible,
     UncompressedDataSerializable,
-    FromBigEndianBytes
+    UncompressedDataRepresentable,
+    FromBigEndianBytes,
+    FromLittleEndianBytes
 {
     internal let storage: Storage
     init(storage: Storage) {
@@ -54,6 +35,10 @@ public struct Fp1:
     }
     public init(littleEndian: some ContiguousBytes) throws {
         try self.init(storage: .init(littleEndian: littleEndian))
+    }
+    
+    public init(uncompressedData: some ContiguousBytes) throws {
+        try self.init(storage: .init(uncompressedData: uncompressedData))
     }
 }
 
@@ -133,6 +118,7 @@ internal extension Fp1 {
         ExpressibleByIntegerLiteral,
         PointComponentProtocol,
         UncompressedDataSerializable,
+        UncompressedDataRepresentable,
         FromBigEndianBytes
     {
         typealias LowLevel = blst_fp
@@ -157,6 +143,18 @@ internal extension Fp1.Storage {
         var lowLevel = LowLevel()
         littleEndian.withUnsafeBytes { le in
             blst_fp_from_lendian(&lowLevel, le.baseAddress)
+        }
+        self.init(lowLevel: lowLevel)
+    }
+    
+    convenience init(uncompressedData: some ContiguousBytes) throws {
+        var lowLevel = LowLevel()
+        Swift.withUnsafePointer(to: &lowLevel) { llc in
+            uncompressedData.withUnsafeBytes { source in
+                let targetStart = UnsafeMutablePointer(mutating: llc)
+                let target = UnsafeMutableBufferPointer(start: targetStart, count: 48)
+                source.copyBytes(to: target)
+            }
         }
         self.init(lowLevel: lowLevel)
     }
@@ -269,31 +267,11 @@ internal extension Fp1.Storage {
     ///
     ///     return data
     /// }
-    func uncompressedDataUsingUInt64() throws -> Data {
+    func uncompressedData() throws -> Data {
         let uint64s = Swift.withUnsafeBytes(of: lowLevel.l) {
             $0.bindMemory(to: UInt64.self)
         }
         return uint64s.map { $0.bigEndian.data }.reduce(Data()) { $0 + $1 }
     }
     
-    /// This function yields identical result as
-    /// func uncompressedDataUsingUInt64() throws -> Data {
-    ///     let uint64s = Swift.withUnsafeBytes(of: lowLevel.l) {
-    ///         $0.bindMemory(to: UInt64.self)
-    ///     }
-    ///     return uint64s.map { $0.bigEndian.data }.reduce(Data()) { $0 + $1 }
-    /// }
-    func uncompressedData() throws -> Data {
-        var lowLevelCopy = self.lowLevel
-        var data = Data.init(repeating: 0xff, count: 48)
-        
-        Swift.withUnsafePointer(to: &lowLevelCopy) { llc in
-            data.withUnsafeMutableBytes { target in
-                let source = UnsafeRawBufferPointer.init(start: llc, count: 48)
-                target.copyBytes(from: source)
-            }
-        }
-        
-        return data
-    }
 }
