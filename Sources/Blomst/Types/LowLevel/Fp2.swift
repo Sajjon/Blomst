@@ -9,20 +9,49 @@ import Foundation
 import BLST
 import BytePattern
 
-public struct Fp2: Equatable, CustomStringConvertible, DataSerializable {
+public struct Fp2:
+    Equatable,
+    CustomStringConvertible,
+    UncompressedDataSerializable,
+    PointComponentProtocol
+{
+    public static func - (lhs: Fp2, rhs: Fp2) -> Fp2 {
+        .init(storage: lhs.storage - rhs.storage)
+    }
+    
+    public static func + (lhs: Fp2, rhs: Fp2) -> Fp2 {
+        .init(storage: lhs.storage + rhs.storage)
+    }
+    
+    public static var one: Fp2 {
+        .init(storage: .one)
+    }
+    
+    public static func * (lhs: Fp2, rhs: Fp2) -> Fp2 {
+        .init(storage: lhs.storage + rhs.storage)
+    }
+    
+    public static var zero: Fp2 {
+        .init(storage: .zero)
+        
+    }
+    
     internal let storage: Storage
     init(storage: Storage) {
         self.storage = storage
+    }
+    init(lowLevel: Storage.LowLevel) {
+        self.init(storage: .init(lowLevel: lowLevel))
     }
 }
 
 public extension Fp2 {
     
-    func toData() -> Data {
-        storage.toData()
+    func uncompressedData() throws -> Data {
+        try storage.uncompressedData()
     }
     var description: String {
-        hex()
+        try! uncompressedData().hex()
     }
 }
 
@@ -49,7 +78,27 @@ internal extension Fp2 {
 
 
 internal extension Fp2 {
-    final class Storage: Equatable, DataSerializable {
+    final class Storage: Equatable, UncompressedDataSerializable, PointComponentProtocol {
+        static func - (lhs: Fp2.Storage, rhs: Fp2.Storage) -> Self {
+            fatalError()
+        }
+        
+        static func + (lhs: Fp2.Storage, rhs: Fp2.Storage) -> Fp2.Storage {
+            fatalError()
+        }
+        
+        static var zero: Fp2.Storage {
+            fatalError()
+        }
+        
+        static var one: Fp2.Storage {
+            fatalError()
+        }
+        
+        static func * (lhs: Fp2.Storage, rhs: Fp2.Storage) -> Fp2.Storage {
+            fatalError()
+        }
+        
         typealias LowLevel = blst_fp2
         private let lowLevel: LowLevel
         internal init(lowLevel: LowLevel) {
@@ -106,7 +155,7 @@ internal extension Fp2.Storage {
 }
 
 internal extension Fp2.Storage {
-    func toData() -> Data {
+    func uncompressedData() throws -> Data {
         var lowLevel = self.lowLevel
         return Swift.withUnsafeBytes(of: &lowLevel) {
             Data($0)

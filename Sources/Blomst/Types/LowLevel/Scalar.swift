@@ -9,7 +9,7 @@ import Foundation
 import BLST
 import BytePattern
 
-public struct Scalar: Equatable, DataSerializable, DataRepresentable {
+public struct Scalar: Equatable, UncompressedDataSerializable, UncompressedDataRepresentable {
     internal let storage: Storage
     internal init(storage: Storage) {
         self.storage = storage
@@ -30,8 +30,8 @@ public extension Scalar {
         self.init(storage: .init(uint64s: uint64s))
     }
     
-    init<D: ContiguousBytes>(data: D) throws {
-        try self.init(storage: .init(data: data))
+    init<D: ContiguousBytes>(uncompressedData: D) throws {
+        try self.init(storage: .init(uncompressedData: uncompressedData))
     }
 }
 
@@ -53,10 +53,10 @@ public extension Scalar {
 }
 #endif // DEBUG
 
-// DataSerializable
+// MARK: UncompressedDataSerializable
 public extension Scalar {
-    func toData() -> Data {
-        storage.toData()
+    func uncompressedData() throws -> Data {
+        try storage.uncompressedData()
     }
 }
 
@@ -68,7 +68,7 @@ internal extension Scalar {
 }
 
 internal extension Scalar {
-    final class Storage: Equatable, DataSerializable, DataRepresentable {
+    final class Storage: Equatable, UncompressedDataSerializable, UncompressedDataRepresentable {
         typealias LowLevel = blst_scalar
         private let lowLevel: LowLevel
         internal init(lowLevel: LowLevel) {
@@ -120,9 +120,9 @@ internal extension Scalar.Storage {
         case failedToCreateScalarFromBytes
     }
     
-    convenience init<D: ContiguousBytes>(data: D) throws {
+    convenience init<D: ContiguousBytes>(uncompressedData: D) throws {
         var lowLevel = LowLevel()
-        try data.withUnsafeBytes { inBytes in
+        try uncompressedData.withUnsafeBytes { inBytes in
             guard blst_scalar_from_be_bytes(&lowLevel, inBytes.baseAddress, inBytes.count) else {
                 throw Error.failedToCreateScalarFromBytes
             }
@@ -154,7 +154,7 @@ internal extension Scalar.Storage {
 }
 
 internal extension Scalar.Storage {
-    func toData() -> Data {
+    func uncompressedData() throws -> Data {
         var lowLevel = self.lowLevel
         return Swift.withUnsafeBytes(of: &lowLevel) {
             Data($0)

@@ -9,7 +9,7 @@ import Foundation
 import BLST
 
 
-public struct PublicKey: Equatable, DataSerializable, AffineSerializable {
+public struct PublicKey: Equatable, UncompressedDataSerializable, CompressedDataSerializable {
     
     internal let p1: P1
     
@@ -18,7 +18,6 @@ public struct PublicKey: Equatable, DataSerializable, AffineSerializable {
     }
 }
 
-// MARK: AffineSerializable
 public extension PublicKey {
     typealias Affine = P1.Affine
     func affine() -> Affine {
@@ -26,15 +25,18 @@ public extension PublicKey {
     }
 }
 
-// MARK: DataSerializable
+// MARK: UncompressedDataSerializable
 public extension PublicKey {
     
     /// Uncompressed publickey
-    func toData() -> Data {
-        p1.toData()
+    func uncompressedData() throws -> Data {
+        try p1.uncompressedData()
     }
-    
-    func compressedData() -> Data {
+}
+
+// MARK: CompressedDataSerializable
+public extension PublicKey {
+    func compressedData() throws -> Data {
         var data = Data(repeating: 0x00, count: 48)
         data.withUnsafeMutableBytes { outBytes in
             p1.withUnsafeLowLevelAccess {

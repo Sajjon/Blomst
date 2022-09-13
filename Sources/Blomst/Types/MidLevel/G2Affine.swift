@@ -10,7 +10,7 @@ import BLST
 
 /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`
 /// guaranteed to be in the group `G2`.
-public struct G2Affine: Equatable, DataSerializable {
+public struct G2Affine: Equatable, AffinePoint, UncompressedDataSerializable {
     internal let p2Affine: P2Affine
    
     init(p2Affine: P2Affine) throws {
@@ -37,10 +37,18 @@ public extension G2Affine {
 }
 
 public extension G2Affine {
-    func toData() -> Data {
-        p2Affine.toData()
+    func uncompressedData() throws -> Data {
+        try p2Affine.uncompressedData()
     }
 }
+
+#if DEBUG
+public extension G2Affine {
+    var hex: String {
+        try! uncompressedData().hex()
+    }
+}
+#endif
 
 public extension G2Affine {
     var x: Fp2 {

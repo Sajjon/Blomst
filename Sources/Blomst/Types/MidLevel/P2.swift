@@ -10,7 +10,40 @@ import BLST
 
 /// A wrapper of `BLS12-381` **projective** point, having three coordinates: `x, y, z`.
 /// /// **NOT NECESSARILY IN THE GROUP **`G2`, for that use `G2Projective`
-public struct P2: Equatable, DataSerializable, AffineSerializable {
+public struct P2:
+    Equatable,
+    UncompressedDataRepresentable,
+    UncompressedDataSerializable,
+    ProjectivePoint
+{
+    public init(x: Fp2, y: Fp2, z: Fp2) throws {
+        try self.init(storage: .init(x: x, y: y, z: z))
+    }
+    
+    public typealias Component = Fp2
+    
+    public var x: Component {
+        storage.x
+    }
+    public var y: Component {
+        storage.y
+    }
+    public var z: Component {
+        storage.z
+    }
+    
+    public static func + (lhs: Self, rhs: Self) -> Self {
+        .init(storage: lhs.storage + rhs.storage)
+    }
+    
+    public static var generator: Self {
+        .init(storage: .generator)
+    }
+    
+    public static var identity: Self {
+        .init(storage: .identity)
+    }
+    
     internal let storage: Storage
     
     internal init(storage: Storage) {
@@ -27,8 +60,8 @@ public struct P2: Equatable, DataSerializable, AffineSerializable {
 }
 
 public extension P2 {
-    init<D>(data: D) throws where D : ContiguousBytes {
-        try self.init(storage: .init(data: data))
+    init(uncompressedData: some ContiguousBytes) throws {
+        try self.init(storage: .init(uncompressedData: uncompressedData))
     }
 }
 
@@ -56,7 +89,7 @@ internal extension P2 {
     }
 }
 
-// MARK: AffineSerializable
+// MARK: ProjectivePoint
 public extension P2 {
     typealias Affine = P2Affine
     func affine() -> Affine {
@@ -65,17 +98,59 @@ public extension P2 {
 }
 
 
-// MARK: DataSerializable
+// MARK: UncompressedDataSerializable
 public extension P2 {
-    func toData() -> Data {
-        storage.toData()
+    func uncompressedData() throws -> Data {
+        try storage.uncompressedData()
     }
 }
 
 // MARK: Storage
 internal extension P2 {
     /// A wrapper of `BLS12-381` point, having three coordinates: `x, y, z`.
-    final class Storage: Equatable, DataSerializable, AffineSerializable {
+    final class Storage: Equatable, UncompressedDataRepresentable, UncompressedDataSerializable, ProjectivePoint {
+        convenience init(x: Fp2, y: Fp2, z: Fp2) throws {
+            let lowLevel: LowLevel = x.withUnsafeLowLevelAccess { xL in
+                y.withUnsafeLowLevelAccess { yL in
+                    z.withUnsafeLowLevelAccess { zL in
+                        return blst_p2(x: xL.pointee, y: yL.pointee, z: zL.pointee)
+                    }
+                }
+            }
+            self.init(lowLevel: lowLevel)
+        }
+        
+        typealias Component = Fp2
+        
+        static var generator: P2.Storage {
+            fatalError()
+        }
+        
+        static var identity: P2.Storage {
+            fatalError()
+        }
+        
+        var x: Component {
+            .init(lowLevel: lowLevel.x)
+        }
+        var y: Component {
+            .init(lowLevel: lowLevel.y)
+        }
+        var z: Component {
+            .init(lowLevel: lowLevel.z)
+        }
+        
+        static func + (lhs: P2.Storage, rhs: P2.Storage) -> P2.Storage {
+            let sum = lhs.withUnsafeLowLevelAccess { l in
+                rhs.withUnsafeLowLevelAccess { r in
+                    var result = LowLevel()
+                    blst_p2_add(&result, l, r)
+                    return result
+                }
+            }
+            return P2.Storage(lowLevel: sum)
+        }
+        
         internal typealias LowLevel = blst_p2
         private let lowLevel: LowLevel
         
@@ -99,8 +174,8 @@ internal extension P2.Storage {
 }
 
 internal extension P2.Storage {
-    convenience init<D>(data: D) throws where D : ContiguousBytes {
-        let affine = try Affine(data: data)
+    convenience init(uncompressedData: some ContiguousBytes) throws {
+        let affine = try Affine(uncompressedData: uncompressedData)
         self.init(affine: affine)
     }
 }
@@ -113,7 +188,7 @@ internal extension P2.Storage {
     }
 }
 
-// MARK: AffineSerializable
+// MARK: ProjectivePoint
 internal extension P2.Storage {
     typealias Affine = P2Affine.Storage
     func affine() -> Affine {
@@ -133,9 +208,9 @@ internal extension P2.Storage {
     }
 }
 
-// MARK: Storage + DataSerializable
+// MARK: Storage + UncompressedDataSerializable
 internal extension P2.Storage {
-    func toData() -> Data {
+    func uncompressedData() throws -> Data {
         var out = Data(repeating: 0x00, count: blst_p2_sizeof())
         var p2 = self.lowLevel
         out.withUnsafeMutableBytes {

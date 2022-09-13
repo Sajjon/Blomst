@@ -9,7 +9,14 @@ import Foundation
 import BLST
 
 /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`
-public struct P1Affine: Equatable, DataSerializable, DataRepresentable, CustomStringConvertible {
+public struct P1Affine:
+    Equatable,
+    AffinePoint,
+    UncompressedDataSerializable,
+    CompressedDataSerializable,
+    UncompressedDataRepresentable,
+    CustomStringConvertible
+{
     public var description: String {
         """
         P1Affine(
@@ -41,11 +48,15 @@ public extension P1Affine {
     var y: Fp1 {
         storage.y
     }
+    
+    var isInfinity: Bool {
+        storage.isInfinity
+    }
 }
 
 public extension P1Affine {
-    init<D>(data: D) throws where D : ContiguousBytes {
-        try self.init(storage: .init(data: data))
+    init(uncompressedData: some ContiguousBytes) throws {
+        try self.init(storage: .init(uncompressedData: uncompressedData))
     }
 }
 
@@ -72,17 +83,24 @@ internal extension P1Affine {
     }
 }
 
-// MARK: DataSerializable
+// MARK: UncompressedDataSerializable
 public extension P1Affine {
-    func toData() -> Data {
-        storage.toData()
+    func uncompressedData() throws -> Data {
+        try storage.uncompressedData()
+    }
+}
+
+// MARK: CompressedDataSerializable
+public extension P1Affine {
+    func compressedData() throws -> Data {
+        try storage.compressedData()
     }
 }
 
 // MARK: Storage
 internal extension P1Affine {
     /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`.
-    final class Storage: Equatable, DataSerializable, DataRepresentable {
+    final class Storage: Equatable, UncompressedDataSerializable, UncompressedDataRepresentable, CompressedDataSerializable, AffinePoint {
         
         internal typealias LowLevel = blst_p1_affine
         private let lowLevel: LowLevel
@@ -109,15 +127,20 @@ internal extension P1Affine.Storage {
     var y: Fp1 {
         .init(lowLevel: lowLevel.y)
     }
+    
+    var isInfinity: Bool {
+//        P1(storage: .init(affine: self)).isInfinity
+        P1.Storage.init(affine: self).isInfinity
+    }
 }
 
 internal extension P1Affine.Storage {
     enum Error: Swift.Error, Equatable {
         case failedToDeserializeFromBytes
     }
-    convenience init<D>(data: D) throws where D : ContiguousBytes {
+    convenience init(uncompressedData: some ContiguousBytes) throws {
         var lowLevel = LowLevel()
-        try data.withUnsafeBytes { inBytes in
+        try uncompressedData.withUnsafeBytes { inBytes in
             guard blst_p1_deserialize(&lowLevel, inBytes.baseAddress) == BLST_SUCCESS else {
                 throw Error.failedToDeserializeFromBytes
             }
@@ -144,15 +167,32 @@ internal extension P1Affine.Storage {
     }
 }
 
-// MARK: Storage + DataSerializable
+// MARK: Storage + UnompressedDataSerializable
 internal extension P1Affine.Storage {
-    func toData() -> Data {
+    func uncompressedData() throws -> Data {
         var out = Data(repeating: 0x00, count: blst_p1_affine_sizeof())
         var p1 = self.lowLevel
         out.withUnsafeMutableBytes {
             blst_p1_affine_serialize($0.baseAddress, &p1)
         }
         return out
+    }
+}
+// MARK: Storage + CompressedDataSerializable
+internal extension P1Affine.Storage {
+    func compressedData() throws -> Data {
+        var copy = self.lowLevel
+        var compressed = Data(repeating: 0x00, count: 48)
+        compressed.withUnsafeMutableBytes { outPtr in
+            blst_p1_affine_compress(outPtr.baseAddress, &copy)
+            
+        }
+//        var compressedData = Data(repeating: 0x00, count: 96)
+//        compressedData.withUnsafeMutableBytes {
+//            blst_p1_affine_serialize($0.baseAddress, &compressed)
+//        }
+//        return compressedData
+        return compressed
     }
 }
 

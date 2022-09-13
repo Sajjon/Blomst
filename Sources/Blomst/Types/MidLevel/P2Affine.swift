@@ -9,7 +9,7 @@ import Foundation
 import BLST
 
 /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`
-public struct P2Affine: Equatable, DataSerializable, DataRepresentable {
+public struct P2Affine: Equatable, AffinePoint, UncompressedDataSerializable, UncompressedDataRepresentable {
     internal let storage: Storage
     
     internal init(storage: Storage) {
@@ -28,8 +28,8 @@ public extension P2Affine {
 }
 
 public extension P2Affine {
-    init<D>(data: D) throws where D : ContiguousBytes {
-        try self.init(storage: .init(data: data))
+    init(uncompressedData: some ContiguousBytes) throws {
+        try self.init(storage: .init(uncompressedData: uncompressedData))
     }
 }
 
@@ -64,17 +64,17 @@ internal extension P2Affine {
     }
 }
 
-// MARK: DataSerializable
+// MARK: UncompressedDataSerializable
 public extension P2Affine {
-    func toData() -> Data {
-        storage.toData()
+    func uncompressedData() throws -> Data {
+        try storage.uncompressedData()
     }
 }
 
 // MARK: Storage
 internal extension P2Affine {
     /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`.
-    final class Storage: Equatable, DataSerializable, DataRepresentable {
+    final class Storage: Equatable, AffinePoint, UncompressedDataSerializable, UncompressedDataRepresentable {
         internal typealias LowLevel = blst_p2_affine
         private let lowLevel: LowLevel
         
@@ -88,9 +88,9 @@ internal extension P2Affine.Storage {
     enum Error: Swift.Error, Equatable {
         case failedToDeserializeFromBytes
     }
-    convenience init<D>(data: D) throws where D : ContiguousBytes {
+    convenience init(uncompressedData: some ContiguousBytes) throws {
         var lowLevel = LowLevel()
-        try data.withUnsafeBytes { inBytes in
+        try uncompressedData.withUnsafeBytes { inBytes in
             guard blst_p2_deserialize(&lowLevel, inBytes.baseAddress) == BLST_SUCCESS else {
                 throw Error.failedToDeserializeFromBytes
             }
@@ -132,9 +132,9 @@ internal extension P2Affine.Storage {
     }
 }
 
-// MARK: Storage + DataSerializable
+// MARK: Storage + UncompressedDataSerializable
 internal extension P2Affine.Storage {
-    func toData() -> Data {
+    func uncompressedData() throws -> Data {
         var out = Data(repeating: 0x00, count: blst_p2_affine_sizeof())
         var lowLevel = self.lowLevel
         out.withUnsafeMutableBytes {

@@ -62,9 +62,9 @@ extension XCTestCase {
     
     func doTestDATFixture(
         name: String,
-        testSuite: (Data) throws -> Void,
         file: StaticString = #file,
-        line: UInt = #line
+        line: UInt = #line,
+        testSuite: (Data) throws -> Void
     ) throws {
         try _doTestSuite(
             fileName: name,

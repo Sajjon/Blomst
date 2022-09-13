@@ -8,7 +8,7 @@
 import Foundation
 import BLST
 
-public struct Signature: Equatable, DataSerializable, AffineSerializable {
+public struct Signature: Equatable, UncompressedDataSerializable {
     
     private let p2: P2
     
@@ -18,7 +18,6 @@ public struct Signature: Equatable, DataSerializable, AffineSerializable {
     
 }
 
-// MARK: AffineSerializable
 public extension Signature {
     typealias Affine = P2.Affine
    
@@ -27,10 +26,10 @@ public extension Signature {
     }
 }
 
-// MARK: DataSerializable
+// MARK: UncompressedDataSerializable
 public extension Signature {
-    func toData() -> Data {
-        p2.toData()
+    func uncompressedData() throws -> Data {
+        try p2.uncompressedData()
     }
 }
 

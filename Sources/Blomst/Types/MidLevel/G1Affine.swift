@@ -8,9 +8,19 @@
 import Foundation
 import BLST
 
+
+
 /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`
 /// guaranteed to be in the group `G1`.
-public struct G1Affine: Equatable, CustomStringConvertible {
+public struct G1Affine:
+    Equatable,
+    CustomStringConvertible,
+    UncompressedDataRepresentable,
+    UncompressedDataSerializable,
+    CompressedDataSerializable,
+    AffinePoint
+{
+    
     public var description: String {
         """
         P1Affine(
@@ -37,18 +47,70 @@ public struct G1Affine: Equatable, CustomStringConvertible {
         try self.init(p1: p1)
     }
     
+    public typealias Component = Fp1
+    
     public init(x: Fp1, y: Fp1) throws {
         try self.init(p1Affine: P1Affine(x: x, y: y))
+    }
+    
+    public init(projective: G1Projective) throws {
+        try self.init(p1Affine: projective.p1.affine())
     }
 }
 
 public extension G1Affine {
+    
+    func compressedData() throws -> Data {
+        let compressed = try p1Affine.compressedData()
+        assert(compressed.data.count == 48)
+        return compressed
+    }
+    
+    /// Serializes this element into uncompressed form.
+    func uncompressedData() throws -> Data {
+        let data = try p1Affine.uncompressedData()
+        assert(data.count == 96)
+        
+        print("isInfinity: \(isInfinity)")
+        print("data: \(data.hex)")
+        
+        
+        /*
+         pub fn to_uncompressed(&self) -> [u8; 96] {
+             let mut res = [0; 96];
+
+             res[0..48].copy_from_slice(
+                 &Fp::conditional_select(&self.x, &Fp::zero(), self.infinity).to_bytes()[..],
+             );
+             res[48..96].copy_from_slice(
+                 &Fp::conditional_select(&self.y, &Fp::zero(), self.infinity).to_bytes()[..],
+             );
+
+             // Is this point at infinity? If so, set the second-most significant bit.
+             res[0] |= u8::conditional_select(&0u8, &(1u8 << 6), self.infinity);
+
+             res
+         }
+         */
+        return data
+    }
+    
     var x: Fp1 {
         p1Affine.x
     }
     var y: Fp1 {
         p1Affine.y
     }
+    
+    var isInfinity: Bool {
+        p1Affine.isInfinity
+    }
+    
+    /// From uncompressed data
+    init(uncompressedData: some ContiguousBytes) throws {
+        try self.init(p1Affine: .init(uncompressedData: uncompressedData))
+    }
+    
 }
 
 public extension G1Affine {

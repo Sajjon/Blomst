@@ -5,13 +5,13 @@ import XCTAssertBytesEqual
 final class BlomstTests: XCTestCase {
     
     func test_conversion() throws {
-        let p1 = P1()
+        let p1 = P1.generator
         let affineP1 = p1.affine()
         let p1FromAffine = P1(affine: affineP1)
         XCTAssertEqual(p1, p1FromAffine)
         XCTAssertEqual(affineP1, p1FromAffine.affine())
-        let p1Bytes = p1.toData()
-        let p1FromBytes = try P1(data: p1Bytes)
+        let p1Bytes = try p1.uncompressedData()
+        let p1FromBytes = try P1(uncompressedData: p1Bytes)
         XCTAssertEqual(p1, p1FromBytes)
     }
     
@@ -23,21 +23,21 @@ final class BlomstTests: XCTestCase {
         // https://github.com/ConsenSys/teku/blob/4fa8f6a8204a56be67eb9dd68b464bff55fe9cf5/bls/src/test/java/tech/pegasys/teku/bls/impl/mikuli/G1PointTest.java#L121
         let bytesHex = "0xa491d1b0ecd9bb917989f0e74f0dea0422eac4a873e5e2644f368dffb9a6e20fd6e10c1b77654d067c0618f6e5a7f79a"
         let bytes = try Data(hex: bytesHex)
-        XCTAssertNoThrow(try P1(data: bytes))
+        XCTAssertNoThrow(try P1(uncompressedData: bytes))
     }
     
     func test_deserialize_p1_invalid_bytes_throws() throws {
         // https://github.com/ConsenSys/teku/blob/4fa8f6a8204a56be67eb9dd68b464bff55fe9cf5/bls/src/test/java/tech/pegasys/teku/bls/impl/mikuli/G1PointTest.java#L121
         let bytesHex = "0xffffd1b0ecd9bb917989f0e74f0dea0422eac4a873e5e2644f368dffb9a6e20fd6e10c1b77654d067c0618f6e5a7f79a" // replace leading "a491" with "ffff"
         let bytes = try Data(hex: bytesHex)
-        XCTAssertThrowsError(try P1(data: bytes))
+        XCTAssertThrowsError(try P1(uncompressedData: bytes))
     }
     
     // https://github.com/ConsenSys/teku/blob/4fa8f6a8204a56be67eb9dd68b464bff55fe9cf5/bls/src/test/java/tech/pegasys/teku/bls/impl/mikuli/G1PointTest.java#L126-L132
     func test_assert_that_an_error_is_throws_when_deserializing_a_point_on_curve_but_not_in_g1() throws {
         let bytesHex = "0x8123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         let bytes = try Data(hex: bytesHex)
-        XCTAssertThrowsError(try G1Projective(p1: P1(data: bytes)))  { anError in
+        XCTAssertThrowsError(try G1Projective(p1: P1(uncompressedData: bytes)))  { anError in
             guard let error = anError as? G1Projective.Error else {
                 return XCTFail("Wrong error type")
             }
@@ -46,10 +46,10 @@ final class BlomstTests: XCTestCase {
     }
     
     func test_secret_key_from_zeros_throws_error() throws {
-        XCTAssertThrowsError(try SecretKey(data: Data(repeating: 0x00, count: SecretKey.byteCount)))
+        XCTAssertThrowsError(try SecretKey(uncompressedData: Data(repeating: 0x00, count: SecretKey.byteCount)))
     }
     func test_secret_key_from_too_few_bytes_throws_error() throws {
-        XCTAssertThrowsError(try SecretKey(data: Data(repeating: 0xde, count: SecretKey.byteCount - 1))) { anError in
+        XCTAssertThrowsError(try SecretKey(uncompressedData: Data(repeating: 0xde, count: SecretKey.byteCount - 1))) { anError in
             guard let error = anError as? SecretKey.Error else {
                 return XCTFail("Wrong error type")
             }
@@ -57,7 +57,7 @@ final class BlomstTests: XCTestCase {
         }
     }
     func test_secret_key_from_too_many_bytes_throws_error() throws {
-        XCTAssertThrowsError(try SecretKey(data: Data(repeating: 0xde, count: SecretKey.byteCount + 1))) { anError in
+        XCTAssertThrowsError(try SecretKey(uncompressedData: Data(repeating: 0xde, count: SecretKey.byteCount + 1))) { anError in
             guard let error = anError as? SecretKey.Error else {
                 return XCTFail("Wrong error type")
             }
@@ -85,7 +85,7 @@ final class BlomstTests: XCTestCase {
         //     0x918acabb2d1c50e7,
         //     0x46229f89c6de24b9,
         // ];
-        XCTAssertEqual(secretKey.hex(), "375e493ae440457073e083a781eed0ede7501c2dbbca8a91b924dec6899f2246")
+        XCTAssertEqual(try secretKey.uncompressedData().hex, "375e493ae440457073e083a781eed0ede7501c2dbbca8a91b924dec6899f2246")
         
         let publicKey = secretKey.publicKey()
         let expectedPublicKeyCompressedData = Data([
@@ -94,7 +94,7 @@ final class BlomstTests: XCTestCase {
             200, 222, 213, 1, 150, 80, 152, 29, 195, 29,
         ])
         XCTAssertEqual(expectedPublicKeyCompressedData.hex(), "8a3aa8965eda354e612463f82fcc34e733868fa24c4c5179c0207d357322c667c59b8d79a063c8ded5019650981dc31d")
-        XCTAssertEqual(publicKey.compressedData().hex(), expectedPublicKeyCompressedData.hex())
+        XCTAssertEqual(try publicKey.compressedData().hex(), expectedPublicKeyCompressedData.hex())
    
     }
     
@@ -111,7 +111,7 @@ final class BlomstTests: XCTestCase {
         ])
         XCTAssertEqual(expectedPublicKeyCompressedData.hex(), "8bb1ad17ca77078a500ef0780c3c3a5f0dc26290b0bfb21d2c76f1a827bed8764d7f32332dc2db3084b1faea29134ea7")
        
-        XCTAssertEqual(publicKey.compressedData().hex(), expectedPublicKeyCompressedData.hex())
+        XCTAssertEqual(try publicKey.compressedData().hex(), expectedPublicKeyCompressedData.hex())
     }
     
     func test_fp1_from_uint64s() throws {
@@ -124,7 +124,7 @@ final class BlomstTests: XCTestCase {
             0x160a52dda57a6489
         ])
         let fromHex = try Fp1(bigEndian: Data(hex: "f0827e0ff0ea4e5af67403477c64ca5460105fa92270f03e8179958d9ffbbe0f51f68ccecfdfc76f160a52dda57a6489"))
-        XCTAssertBytesEqual(fromHex.toData(), fromInts.toData(), haltOnPatternNonIdentical: true)
+        XCTAssertBytesEqual(try fromHex.uncompressedData(), try fromInts.uncompressedData(), haltOnPatternNonIdentical: true)
         XCTAssertEqual(fromHex, fromInts)
     }
   
@@ -183,9 +183,7 @@ final class BlomstTests: XCTestCase {
             domainSeperationTag: domainSeperationTag
         ).p2Affine
    
-        print("expected: \(expected.hex)")
-        print("result: \(result.hex)")
-        XCTAssertBytesEqual(result, expected, passOnPatternNonIdentical: true, haltOnPatternNonIdentical: true)
+        XCTAssertBytesEqual(try result.uncompressedData(), try expected.uncompressedData(), passOnPatternNonIdentical: true, haltOnPatternNonIdentical: true)
         /*
                 assert_eq!(hash_to_g2(&message[..], &dst).into_affine(), result);
                 

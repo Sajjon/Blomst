@@ -37,7 +37,13 @@ public protocol FromBigEndianBytes {
     init<D>(bigEndian: D) throws where D: ContiguousBytes
 }
 
-public struct Fp1: Equatable, CustomStringConvertible, DataSerializable, FromBigEndianBytes {
+public struct Fp1:
+    Equatable,
+    PointComponentProtocol,
+    CustomStringConvertible,
+    UncompressedDataSerializable,
+    FromBigEndianBytes
+{
     internal let storage: Storage
     init(storage: Storage) {
         self.storage = storage
@@ -75,13 +81,13 @@ public extension Fp1 {
 
 public extension Fp1 {
     var description: String {
-        hex()
+        try! uncompressedData().hex()
     }
 }
 
 public extension Fp1 {
-    func toData() -> Data {
-        storage.toData()
+    func uncompressedData() throws -> Data {
+        try storage.uncompressedData()
     }
 }
 
@@ -93,9 +99,10 @@ internal extension Fp1 {
 }
 
 // MARK: AdditiveArithmetic
-extension Fp1: AdditiveArithmetic, ExpressibleByIntegerLiteral {}
+extension Fp1: ExpressibleByIntegerLiteral {}
 public extension Fp1 {
     static let zero = Self(storage: .zero)
+    static let one = Self(storage: .one)
     
     static func + (lhs: Self, rhs: Self) -> Self {
         .init(storage: lhs.storage + rhs.storage)
@@ -118,7 +125,13 @@ public extension Fp1 {
 }
 
 internal extension Fp1 {
-    final class Storage: Equatable, ExpressibleByIntegerLiteral, AdditiveArithmetic, DataSerializable, FromBigEndianBytes {
+    final class Storage:
+        Equatable,
+        ExpressibleByIntegerLiteral,
+        PointComponentProtocol,
+        UncompressedDataSerializable,
+        FromBigEndianBytes
+    {
         typealias LowLevel = blst_fp
         private let lowLevel: LowLevel
         internal init(lowLevel: LowLevel) {
@@ -206,6 +219,7 @@ internal extension Fp1.Storage {
     }
     
     static let zero = Fp1.Storage(mostSignificantUInt32: 0)
+    static let one = Fp1.Storage(mostSignificantUInt32: 1)
     
     static func + (lhs: Fp1.Storage, rhs: Fp1.Storage) -> Fp1.Storage {
         lhs.withUnsafeLowLevelAccess { l in
@@ -229,7 +243,7 @@ internal extension Fp1.Storage {
 }
 
 internal extension Fp1.Storage {
-    func toData() -> Data {
+    func uncompressedData() throws -> Data {
 //        var lowLevel = self.lowLevel
         let uint64s = Swift.withUnsafeBytes(of: lowLevel.l) {
 //            $0.load(as: [UInt64].self)

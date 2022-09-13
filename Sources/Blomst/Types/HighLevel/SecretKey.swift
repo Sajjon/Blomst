@@ -10,7 +10,7 @@ import CryptoKit
 import BLST
 import BytePattern
 
-public struct SecretKey: Equatable, DataSerializable, DataRepresentable {
+public struct SecretKey: Equatable, UncompressedDataSerializable, UncompressedDataRepresentable {
     private let scalar: Scalar
     
     internal init(scalar: Scalar) {
@@ -34,7 +34,7 @@ public extension SecretKey {
         }
 
         self = try okm.withUnsafeBytes {
-            try Self.init(data: $0)
+            try Self.init(uncompressedData: $0)
         }
     }
 }
@@ -42,16 +42,16 @@ public extension SecretKey {
 // MARK: Generate new
 public extension SecretKey {
     init() throws {
-        try self.init(data: SecureBytes(count: Self.byteCount))
+        try self.init(uncompressedData: SecureBytes(count: Self.byteCount))
     }
 }
 
-// MARK: DataRepresentable
+// MARK: UncompressedDataRepresentable
 public extension SecretKey {
-    init<D>(data: D) throws where D : ContiguousBytes {
+    init(uncompressedData: some ContiguousBytes) throws {
         
         // Validation
-        try data.withUnsafeBytes { bytes in
+        try uncompressedData.withUnsafeBytes { bytes in
             if bytes.count < Self.byteCount {
                 throw Error.tooFewBytes(got: bytes.count)
             }
@@ -63,15 +63,15 @@ public extension SecretKey {
             }
         }
         
-        let scalar = try Scalar(data: data)
+        let scalar = try Scalar(uncompressedData: uncompressedData)
         self.init(scalar: scalar)
     }
 }
 
-// MARK: DataSerializable
+// MARK: UncompressedDataSerializable
 public extension SecretKey {
-    func toData() -> Data {
-        scalar.toData()
+    func uncompressedData() throws -> Data {
+        try scalar.uncompressedData()
     }
 }
     
