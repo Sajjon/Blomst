@@ -21,8 +21,8 @@ public struct P1Affine:
     public var description: String {
         """
         P1Affine(
-            x: \(x)
-            y: \(y)
+            x: 0x\(x)
+            y: 0x\(y)
         )
         """
     }
@@ -207,11 +207,6 @@ internal extension P1Affine.Storage {
             blst_p1_affine_compress(outPtr.baseAddress, &copy)
             
         }
-//        var compressedData = Data(repeating: 0x00, count: 96)
-//        compressedData.withUnsafeMutableBytes {
-//            blst_p1_affine_serialize($0.baseAddress, &compressed)
-//        }
-//        return compressedData
         return compressed
     }
 }

@@ -9,6 +9,7 @@ import Foundation
 import XCTest
 import Blomst
 import XCTAssertBytesEqual
+import BytesMutation
 
 final class HashToCurveG1Tests: XCTestCase {
     
@@ -20,10 +21,10 @@ final class HashToCurveG1Tests: XCTestCase {
     
     func test_fp1_from_data_then_to_data_roundtrip() throws {
         let data = try Data(hex: "184bb665c37ff561a89ec2122dd343f20e0f4cbcaec84e3c3052ea81d1834e192c426074b02ed3dca4e7676ce4ce48ba")
-        let fp = try Fp1(bigEndian: data)
+        let fp = try Fp1(uncompressedData: data)
         XCTAssertBytesEqual(
             try! fp.uncompressedData(),
-            try! Data(hex: "3e922090635c8937de40a507546e27e613d5429507169353e884c93ee9cef688c4be45837e1fd02607fb9b8d29ed3d42")
+            data
         )
         
     }
@@ -192,7 +193,8 @@ extension HashToCurveTestSuite {
         }
     }
     
-    func domainSeparationTag(line: UInt = #line) throws -> Data {
-        try XCTUnwrap(dst.data(using: .utf8), line: line)
+    func domainSeparationTag(line: UInt = #line) throws -> DomainSeperationTag {
+        let data = try XCTUnwrap(dst.data(using: .utf8), line: line)
+        return .init(data: data)
     }
 }

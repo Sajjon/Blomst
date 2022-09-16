@@ -131,6 +131,42 @@ internal extension Fp1 {
 
 internal extension Fp1.Storage {
     
+    static func from_bytes(_ bytes: some ContiguousBytes) throws -> Self {
+        /*
+         let mut tmp = Fp([0, 0, 0, 0, 0, 0]);
+
+               tmp.0[5] = u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[0..8]).unwrap());
+               tmp.0[4] = u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[8..16]).unwrap());
+               tmp.0[3] = u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[16..24]).unwrap());
+               tmp.0[2] = u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[24..32]).unwrap());
+               tmp.0[1] = u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[32..40]).unwrap());
+               tmp.0[0] = u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[40..48]).unwrap());
+
+               // Try to subtract the modulus
+               let (_, borrow) = sbb(tmp.0[0], MODULUS[0], 0);
+               let (_, borrow) = sbb(tmp.0[1], MODULUS[1], borrow);
+               let (_, borrow) = sbb(tmp.0[2], MODULUS[2], borrow);
+               let (_, borrow) = sbb(tmp.0[3], MODULUS[3], borrow);
+               let (_, borrow) = sbb(tmp.0[4], MODULUS[4], borrow);
+               let (_, borrow) = sbb(tmp.0[5], MODULUS[5], borrow);
+
+               // If the element is smaller than MODULUS then the
+               // subtraction will underflow, producing a borrow value
+               // of 0xffff...ffff. Otherwise, it'll be zero.
+               let is_some = (borrow as u8) & 1;
+
+               // Convert to Montgomery form by computing
+               // (a.R^0 * R^2) / R = a.R
+               tmp *= &R2;
+
+               CtOption::new(tmp, Choice::from(is_some))
+         */
+        var lowLevel = LowLevel()
+        
+        lowLevel.l.0 = 0
+        return Self.init(lowLevel: lowLevel)
+    }
+    
     convenience init(bigEndian: some ContiguousBytes) throws {
         var lowLevel = LowLevel()
         bigEndian.withUnsafeBytes { be in
@@ -162,12 +198,13 @@ internal extension Fp1.Storage {
 internal extension Fp1.Storage {
     
     convenience init(mostSignificantUInt64: UInt64) {
-        self.init(uint64s: [0, 0, 0, 0, 0, mostSignificantUInt64])
+        self.init(uint64s: [mostSignificantUInt64, 0, 0, 0, 0, 0])
     }
     
     convenience init(uint64s: [UInt64]) {
         precondition(uint64s.count == 6)
-        var uint64s =  [UInt64](uint64s.map { $0.littleEndian }.reversed())
+        var uint64s = uint64s
+//        var uint64s =  [UInt64](uint64s.map { $0.littleEndian }.reversed())
         var lowLevel = LowLevel()
         blst_fp_from_uint64(&lowLevel, &uint64s)
         self.init(lowLevel: lowLevel)
@@ -226,8 +263,8 @@ internal extension Fp1.Storage {
         }
     }
     
-    static let zero = Fp1.Storage(mostSignificantUInt32: 0)
-    static let one = Fp1.Storage(mostSignificantUInt32: 1)
+    static let zero = try! Fp1.Storage(uncompressedData: try! Data(hex: "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"))
+    static let one = try! Fp1.Storage(uncompressedData: try! Data(hex: "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"))
     
     static func + (lhs: Fp1.Storage, rhs: Fp1.Storage) -> Fp1.Storage {
         lhs.withUnsafeLowLevelAccess { l in

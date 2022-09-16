@@ -11,7 +11,8 @@ let package = Package(
             targets: ["Blomst"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/sajjon/BytePattern", from: "0.0.3")
+        .package(url: "https://github.com/sajjon/BytePattern", from: "0.0.3"),
+        .package(url: "https://github.com/attaswift/BigInt", from: "5.3.0"),
     ],
     targets: [
         .binaryTarget(
@@ -29,6 +30,7 @@ let package = Package(
             name: "BlomstTests",
             dependencies: [
                 "Blomst",
+                "BigInt",
                 .product(name: "XCTAssertBytesEqual", package: "BytePattern")
             ]),
     ]

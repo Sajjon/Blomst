@@ -12,6 +12,9 @@ import BLST
 /// guaranteed to be in the group `G2`.
 public struct G2Affine: Equatable, AffinePoint, UncompressedDataSerializable {
     internal let p2Affine: P2Affine
+    var p2: P2 {
+        p2Affine.p2
+    }
    
     init(p2Affine: P2Affine) throws {
         guard p2Affine.isElementInGroupG2() else {
@@ -31,6 +34,7 @@ public struct G2Affine: Equatable, AffinePoint, UncompressedDataSerializable {
 }
 
 public extension G2Affine {
+
     init(x: Fp2, y: Fp2) throws {
         try self.init(p2Affine: .init(x: x, y: y))
     }

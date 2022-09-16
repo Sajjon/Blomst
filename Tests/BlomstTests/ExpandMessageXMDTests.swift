@@ -75,8 +75,9 @@ struct XMDTestSuite: TestSuite, Decodable {
     let name: String
     let tests: [Test]
     
-    func dst(line: UInt = #line) throws -> Data {
-        try XCTUnwrap(DST.data(using: .utf8), line: line)
+    func dst(line: UInt = #line) throws -> DomainSeperationTag {
+        let data = try XCTUnwrap(DST.data(using: .utf8), line: line)
+        return .init(data: data)
     }
     
     ///  {
@@ -110,8 +111,8 @@ struct XMDTestSuite: TestSuite, Decodable {
             try _unhex(hex: uniform_bytes, line: line)
         }
         
-        func dst(line: UInt = #line) throws -> Data {
-            try _unhex(hex: DST_prime, line: line)
+        func dst(line: UInt = #line) throws -> DomainSeperationTag {
+            try DomainSeperationTag(data: _unhex(hex: DST_prime, line: line))
         }
     }
 }

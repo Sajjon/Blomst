@@ -7,10 +7,18 @@
 
 import Foundation
 
+/// Do NOT also conform to `CompressedDataSerializable` or `UncompressedDataSerializable`, they should be mutually exclusive.
+public protocol DataSerializable {
+    func data() throws -> Data
+}
+
+
+/// Do NOT also conform to `DataSerializable`, that and this protocol should be mutually exclusive.
 public protocol CompressedDataSerializable {
     func compressedData() throws -> Data
 }
 
+/// Do NOT also conform to `DataSerializable`, that and this protocol should be mutually exclusive.
 public protocol UncompressedDataSerializable {
     func uncompressedData() throws -> Data
 }

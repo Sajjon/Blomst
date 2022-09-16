@@ -9,12 +9,24 @@ import Foundation
 import BLST
 
 
-public struct PublicKey: Equatable, UncompressedDataSerializable, CompressedDataSerializable {
+public struct PublicKey:
+    Equatable,
+        UncompressedDataSerializable,
+        CompressedDataSerializable,
+        UncompressedDataRepresentable,
+        CompressedDataRepresentable
+{
     
     internal let p1: P1
     
     internal init(p1: P1) {
         self.p1 = p1
+    }
+    public init(uncompressedData: some ContiguousBytes) throws {
+        try self.init(p1: .init(uncompressedData: uncompressedData))
+    }
+    public init(compressedData: some ContiguousBytes) throws {
+        try self.init(p1: .init(compressedData: compressedData))
     }
 }
 

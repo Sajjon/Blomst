@@ -9,7 +9,7 @@ import Foundation
 import BLST
 import BytePattern
 
-public struct Scalar: Equatable, UncompressedDataSerializable, UncompressedDataRepresentable {
+public struct Scalar: Equatable, DataSerializable, DataRepresentable {
     internal let storage: Storage
     internal init(storage: Storage) {
         self.storage = storage
@@ -30,13 +30,21 @@ public extension Scalar {
         self.init(storage: .init(uint64s: uint64s))
     }
     
-    init<D: ContiguousBytes>(uncompressedData: D) throws {
-        try self.init(storage: .init(uncompressedData: uncompressedData))
+    init(data: some ContiguousBytes) throws {
+        try self.init(storage: .init(data: data))
     }
 }
 
 #if DEBUG
+extension Scalar: ExpressibleByIntegerLiteral {
+    public typealias IntegerLiteralType = Int
+    public init(integerLiteral mostSignigicantInt: IntegerLiteralType) {
+        self.init(mostSignigicantInt: mostSignigicantInt)
+    }
+}
+
 public extension Scalar {
+    
     
     init(mostSignigicantInt: Int) {
         self.init(mostSignificantUInt64: .init(mostSignigicantInt))
@@ -53,10 +61,10 @@ public extension Scalar {
 }
 #endif // DEBUG
 
-// MARK: UncompressedDataSerializable
+// MARK: DataSerializable
 public extension Scalar {
-    func uncompressedData() throws -> Data {
-        try storage.uncompressedData()
+    func data() throws -> Data {
+        try storage.data()
     }
 }
 
@@ -68,7 +76,7 @@ internal extension Scalar {
 }
 
 internal extension Scalar {
-    final class Storage: Equatable, UncompressedDataSerializable, UncompressedDataRepresentable {
+    final class Storage: Equatable, DataSerializable, DataRepresentable {
         typealias LowLevel = blst_scalar
         private let lowLevel: LowLevel
         internal init(lowLevel: LowLevel) {
@@ -120,15 +128,16 @@ internal extension Scalar.Storage {
         case failedToCreateScalarFromBytes
     }
     
-    convenience init<D: ContiguousBytes>(uncompressedData: D) throws {
+    convenience init(data: some ContiguousBytes) throws {
         var lowLevel = LowLevel()
-        try uncompressedData.withUnsafeBytes { inBytes in
+        try data.withUnsafeBytes { inBytes in
             guard blst_scalar_from_be_bytes(&lowLevel, inBytes.baseAddress, inBytes.count) else {
                 throw Error.failedToCreateScalarFromBytes
             }
         }
         self.init(lowLevel: lowLevel)
     }
+
 }
 
 internal extension Scalar.Storage {
@@ -153,11 +162,14 @@ internal extension Scalar.Storage {
     }
 }
 
+import BytesMutation
 internal extension Scalar.Storage {
-    func uncompressedData() throws -> Data {
+    func data() throws -> Data {
         var lowLevel = self.lowLevel
-        return Swift.withUnsafeBytes(of: &lowLevel) {
-            Data($0)
+        var bytes = Swift.withUnsafeBytes(of: &lowLevel) {
+            [UInt8]($0)
         }
+        bytes.reverse()
+        return Data(bytes)
     }
 }

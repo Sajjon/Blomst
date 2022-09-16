@@ -9,14 +9,32 @@ import Foundation
 import CryptoKit
 import BLST
 import BytePattern
+import BigInt
 
-public struct SecretKey: Equatable, UncompressedDataSerializable, UncompressedDataRepresentable {
+public struct SecretKey:
+    Equatable,
+    DataSerializable,
+    DataRepresentable
+{
     private let scalar: Scalar
     
-    internal init(scalar: Scalar) {
+    public init(scalar: Scalar) {
         self.scalar = scalar
     }
+  
 }
+
+public extension SecretKey {
+    init(decimalString: String) throws {
+        guard let int = BigUInt(decimalString, radix: 10) else {
+            throw Error.invalidDecimalString
+        }
+        let data = int.serialize()
+        let scalar = try Scalar(data: data)
+        self.init(scalar: scalar)
+    }
+}
+
 
 
 public extension SecretKey {
@@ -34,7 +52,7 @@ public extension SecretKey {
         }
 
         self = try okm.withUnsafeBytes {
-            try Self.init(uncompressedData: $0)
+            try Self.init(data: $0)
         }
     }
 }
@@ -42,16 +60,16 @@ public extension SecretKey {
 // MARK: Generate new
 public extension SecretKey {
     init() throws {
-        try self.init(uncompressedData: SecureBytes(count: Self.byteCount))
+        try self.init(data: SecureBytes(count: Self.byteCount))
     }
 }
 
-// MARK: UncompressedDataRepresentable
+// MARK: DataRepresentable
 public extension SecretKey {
-    init(uncompressedData: some ContiguousBytes) throws {
+    init(data: some ContiguousBytes) throws {
         
         // Validation
-        try uncompressedData.withUnsafeBytes { bytes in
+        try data.withUnsafeBytes { bytes in
             if bytes.count < Self.byteCount {
                 throw Error.tooFewBytes(got: bytes.count)
             }
@@ -63,15 +81,16 @@ public extension SecretKey {
             }
         }
         
-        let scalar = try Scalar(uncompressedData: uncompressedData)
+        let scalar = try Scalar(data: data)
         self.init(scalar: scalar)
     }
+    
 }
 
-// MARK: UncompressedDataSerializable
+// MARK: DataSerializable
 public extension SecretKey {
-    func uncompressedData() throws -> Data {
-        try scalar.uncompressedData()
+    func data() throws -> Data {
+        try scalar.data()
     }
 }
     
@@ -89,32 +108,56 @@ public extension SecretKey {
     
     func sign(
         message: Message,
-        domainSeperationTag: DomainSeperationTag,
+        domainSeperationTag: DomainSeperationTag = .G2,
         augmentation: Augmentation = .init()
     ) throws -> Signature {
-        domainSeperationTag.withUnsafeBytes { dstBytes in
-            augmentation.withUnsafeBytes { augBytes in
-                message.withUnsafeBytes { msgBytes in
-                    var hash = blst_p2()
-                    blst_hash_to_g2(
-                        &hash,
-                        msgBytes.baseAddress,
-                        msgBytes.count,
-                        dstBytes.baseAddress,
-                        dstBytes.count,
-                        augBytes.baseAddress,
-                        augBytes.count
-                    )
-                    var outSig = blst_p2()
-                    self.scalar.withUnsafeLowLevelAccess { sk in
-                        blst_sign_pk_in_g1(&outSig, &hash, sk)
-                    }
-                    return Signature(p2: .init(lowLevel: outSig))
-                }
+//        domainSeperationTag.withUnsafeBytes { dstBytes in
+//            augmentation.withUnsafeBytes { augBytes in
+//                message.withUnsafeBytes { msgBytes in
+//
+//                    var outSig = blst_p2()
+//                    self.scalar.withUnsafeLowLevelAccess { sk in
+//                        blst_sign_pk_in_g1(&outSig, &hash, sk)
+//                    }
+//                    return Signature(p2: .init(lowLevel: outSig))
+//                }
+//            }
+//        }
+        let hashAffine = try hashToG2(
+            message: message,
+            domainSeperationTag: domainSeperationTag,
+            augmentation: augmentation
+        )
+        let hash = hashAffine.p2
+        var outSig = blst_p2()
+     
+        self.scalar.withUnsafeLowLevelAccess { sk in
+            hash.withUnsafeLowLevelAccess { hsh in
+                blst_sign_pk_in_g1(&outSig, hsh, sk)
             }
         }
+        
+        return Signature(p2: .init(lowLevel: outSig))
+      
     }
 }
+
+#if DEBUG
+public extension SecretKey {
+    
+    func sign(
+        _ message: String,
+        domainSeperationTag: DomainSeperationTag = .G2,
+        augmentation: Augmentation = .init()
+    ) throws -> Signature {
+        try sign(
+            message: message.data(using: .utf8)!,
+            domainSeperationTag: domainSeperationTag,
+            augmentation: augmentation
+        )
+    }
+}
+#endif // DEBUG
 
 public extension SecretKey {
     /// given by ceil((1.5 * ceil(log2(r))) / 8).
@@ -129,5 +172,16 @@ public extension SecretKey {
         case tooManyBytes(got: Int, expected: Int = SecretKey.byteCount)
         case bytesAllZero
         case deserializeFromBytesFailed
+        case invalidDecimalString
     }
 }
+
+#if DEBUG
+extension SecretKey: ExpressibleByIntegerLiteral {
+    public typealias IntegerLiteralType = Int
+    public init(integerLiteral mostSignigicantInt: IntegerLiteralType) {
+        self.init(scalar: .init(integerLiteral: mostSignigicantInt))
+    }
+}
+
+#endif // DEBUG

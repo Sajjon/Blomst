@@ -10,7 +10,14 @@ import BLST
 
 /// A wrapper of `BLS12-381` **projective** point, having three coordinates: `x, y, z`.
 /// **NOT NECESSARILY IN THE GROUP **`G1`, for that use `G1Projective`
-public struct P1: Equatable, UncompressedDataSerializable, ProjectivePoint, UncompressedDataRepresentable, CustomStringConvertible {
+public struct P1:
+    Equatable,
+    UncompressedDataSerializable,
+    ProjectivePoint,
+    UncompressedDataRepresentable,
+    CompressedDataRepresentable,
+    CustomStringConvertible
+{
     public static func + (lhs: Self, rhs: Self) -> Self {
         .init(storage: lhs.storage + rhs.storage)
     }
@@ -28,9 +35,9 @@ public struct P1: Equatable, UncompressedDataSerializable, ProjectivePoint, Unco
     public var description: String {
         """
         P1(
-            x: \(x)
-            y: \(y)
-            z: \(z)
+            x: 0x\(x)
+            y: 0x\(y)
+            z: 0x\(z)
         )
         """
     }
@@ -75,6 +82,10 @@ public extension P1 {
     init(uncompressedData: some ContiguousBytes) throws {
         try self.init(storage: .init(uncompressedData: uncompressedData))
     }
+    
+    init(compressedData: some ContiguousBytes) throws {
+        try self.init(storage: .init(compressedData: compressedData))
+    }
 }
 
 internal extension P1 {
@@ -113,32 +124,13 @@ public extension P1 {
 // MARK: Storage
 internal extension P1 {
     /// A wrapper of `BLS12-381` point, having three coordinates: `x, y, z`.
-    final class Storage: Equatable, UncompressedDataSerializable, UncompressedDataRepresentable, ProjectivePoint {
-        static func + (lhs: P1.Storage, rhs: P1.Storage) -> P1.Storage {
-            lhs.withUnsafeLowLevelAccess { l in
-                rhs.withUnsafeLowLevelAccess { r in
-                    var result = LowLevel()
-                    blst_p1_add(&result, l, r)
-                    return P1.Storage(lowLevel: result)
-                }
-            }
-        }
-        
-        
-        static var generator: P1.Storage {
-            guard let generator = blst_p1_generator() else {
-                fatalError()
-            }
-            return P1.Storage(lowLevel: generator.pointee)
-        }
-        
-        static var identity: P1.Storage {
-            fatalError()
-        }
-        
-        public static var byteCount: Int {
-            blst_p1_sizeof()
-        }
+    final class Storage:
+        Equatable,
+        UncompressedDataSerializable,
+        UncompressedDataRepresentable,
+        ProjectivePoint,
+        CompressedDataRepresentable
+    {
         internal typealias LowLevel = blst_p1
         private let lowLevel: LowLevel
    
@@ -149,16 +141,47 @@ internal extension P1 {
             }
         }
         
-        public convenience init(x: Fp1, y: Fp1, z: Fp1) {
-            let lowLevel = x.withUnsafeLowLevelAccess { xp in
-                y.withUnsafeLowLevelAccess { yp in
-                    z.withUnsafeLowLevelAccess { zp in
-                        LowLevel(x: xp.pointee, y: yp.pointee, z: zp.pointee)
-                    }
+       
+    }
+}
+
+internal extension P1.Storage {
+    
+    convenience init(x: Fp1, y: Fp1, z: Fp1) {
+        let lowLevel = x.withUnsafeLowLevelAccess { xp in
+            y.withUnsafeLowLevelAccess { yp in
+                z.withUnsafeLowLevelAccess { zp in
+                    LowLevel(x: xp.pointee, y: yp.pointee, z: zp.pointee)
                 }
             }
-            self.init(lowLevel: lowLevel)
         }
+        self.init(lowLevel: lowLevel)
+    }
+    
+    static func + (lhs: P1.Storage, rhs: P1.Storage) -> P1.Storage {
+        lhs.withUnsafeLowLevelAccess { l in
+            rhs.withUnsafeLowLevelAccess { r in
+                var result = LowLevel()
+                blst_p1_add(&result, l, r)
+                return P1.Storage(lowLevel: result)
+            }
+        }
+    }
+    
+    
+    static var generator: P1.Storage {
+        guard let generator = blst_p1_generator() else {
+            fatalError()
+        }
+        return P1.Storage(lowLevel: generator.pointee)
+    }
+    
+    static var identity: P1.Storage {
+        fatalError()
+    }
+    
+    static var byteCount: Int {
+        blst_p1_sizeof()
     }
 }
 
@@ -193,6 +216,11 @@ internal extension P1.Storage {
     
     convenience init(uncompressedData: some ContiguousBytes) throws {
         let affine = try Affine(uncompressedData: uncompressedData)
+        self.init(affine: affine)
+    }
+    
+    convenience init(compressedData: some ContiguousBytes) throws {
+        let affine = try Affine(compressedData: compressedData)
         self.init(affine: affine)
     }
 }

@@ -71,28 +71,6 @@ public extension G1Affine {
     func uncompressedData() throws -> Data {
         let data = try p1Affine.uncompressedData()
         assert(data.count == 96)
-        
-        print("isInfinity: \(isInfinity)")
-        print("data: \(data.hex)")
-        
-        
-        /*
-         pub fn to_uncompressed(&self) -> [u8; 96] {
-             let mut res = [0; 96];
-
-             res[0..48].copy_from_slice(
-                 &Fp::conditional_select(&self.x, &Fp::zero(), self.infinity).to_bytes()[..],
-             );
-             res[48..96].copy_from_slice(
-                 &Fp::conditional_select(&self.y, &Fp::zero(), self.infinity).to_bytes()[..],
-             );
-
-             // Is this point at infinity? If so, set the second-most significant bit.
-             res[0] |= u8::conditional_select(&0u8, &(1u8 << 6), self.infinity);
-
-             res
-         }
-         */
         return data
     }
     

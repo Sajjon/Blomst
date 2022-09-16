@@ -29,7 +29,7 @@ public struct Pairing {
                     OpaquePointer(vBytes.baseAddress),
                     hashOrEncode,
                     dstBytes.baseAddress,
-                    domainSeperationTag.count
+                    domainSeperationTag.bytes.count
                 )
 
             }
