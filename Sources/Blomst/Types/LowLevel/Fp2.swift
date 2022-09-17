@@ -87,16 +87,24 @@ internal extension Fp2 {
             fatalError()
         }
         
+        // GUESSING HERE
         static var zero: Fp2.Storage {
-            fatalError()
+            Fp2.Storage(real: .zero, imaginary: .zero)
         }
         
+        // GUESSING HERE
         static var one: Fp2.Storage {
-            fatalError()
+            Fp2.Storage(real: .one, imaginary: .one)
         }
         
+        // GUESSING HERE
         static func * (lhs: Fp2.Storage, rhs: Fp2.Storage) -> Fp2.Storage {
-            fatalError()
+            let real: Fp1 = lhs.real * rhs.real
+            let imaginary: Fp1 = lhs.imaginary * rhs.imaginary
+            return Fp2.Storage(
+                real: real.storage,
+                imaginary: imaginary.storage
+            )
         }
         
         typealias LowLevel = blst_fp2

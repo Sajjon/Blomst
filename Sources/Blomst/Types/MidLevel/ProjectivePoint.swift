@@ -7,9 +7,13 @@
 
 import Foundation
 
-public protocol PointComponentProtocol: AdditiveArithmetic {
-    static var one: Self { get }
+public protocol MultiplicativeArithmetic {
     static func * (lhs: Self, rhs: Self) -> Self
+}
+
+
+public protocol PointComponentProtocol: MultiplicativeArithmetic, AdditiveArithmetic {
+    static var one: Self { get }
 }
 
 public protocol ProjectivePoint {

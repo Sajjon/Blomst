@@ -10,6 +10,7 @@ import XCTest
 import Blomst
 import XCTAssertBytesEqual
 
+@MainActor
 final class ExpandMessageXMDTests: XCTestCase {
     
     override func setUp() {
@@ -18,8 +19,8 @@ final class ExpandMessageXMDTests: XCTestCase {
         DefaultXCTAssertBytesEqualParameters.haltOnPatternNonIdentical = true
     }
     
-    func test_message_xmd_SHA256_256() throws {
-        try doTestSuite(name: "expand_message_xmd_SHA256_256") { suite, test, testIndex in
+    func test_message_xmd_SHA256_256() async throws {
+        try await doTestSuite(name: "expand_message_xmd_SHA256_256") { suite, test, testIndex in
             print("🔮 testing vector at: \(testIndex)")
             let expanded = try expandMessageXMD(
                 toLength: test.length(),
@@ -32,8 +33,8 @@ final class ExpandMessageXMDTests: XCTestCase {
         }
     }
     
-    func test_message_xmd_SHA256_38() throws {
-        try doTestSuite(name: "expand_message_xmd_SHA256_38") { suite, test, testIndex in
+    func test_message_xmd_SHA256_38() async throws {
+        try await doTestSuite(name: "expand_message_xmd_SHA256_38") { suite, test, testIndex in
             print("🔮 testing vector at: \(testIndex)")
             let expanded = try expandMessageXMD(
                 toLength: test.length(),
@@ -50,10 +51,10 @@ final class ExpandMessageXMDTests: XCTestCase {
 private extension ExpandMessageXMDTests {
     func doTestSuite(
         name: String,
-        testVector: (XMDTestSuite, XMDTestSuite.Test, Int) throws -> Void,
+        testVector: @escaping (XMDTestSuite, XMDTestSuite.Test, Int) throws -> Void,
         line: UInt = #line
-    ) throws {
-        try doTestJSONFixture(
+    ) async throws {
+        try await doTestJSONFixture(
             name: name,
             decodeAs: XMDTestSuite.self,
             testVectorFunction: testVector

@@ -7,10 +7,11 @@
 
 import Foundation
 import XCTest
-import Blomst
+@testable import Blomst
 import XCTAssertBytesEqual
 import BytesMutation
 
+@MainActor
 final class HashToCurveG1Tests: XCTestCase {
     
     override func setUp() {
@@ -29,27 +30,27 @@ final class HashToCurveG1Tests: XCTestCase {
         
     }
     
-    func test_hash_to_curve_g1_RO() throws {
-        try doTestG1(
+    func test_hash_to_curve_g1_RO() async throws {
+        try await doTestG1(
             name: "BLS12381G1_XMD_SHA-256_SSWU_RO_"
         )
  
     }
     
-    func test_hash_to_curve_g1_NU() throws {
-        try doTestG1(
+    func test_hash_to_curve_g1_NU() async throws {
+        try await doTestG1(
             name: "BLS12381G1_XMD_SHA-256_SSWU_NU_"
         )
     }
     
-    func test_hash_to_curve_g2_NU() throws {
-        try doTestG2(
+    func test_hash_to_curve_g2_NU() async throws {
+        try await doTestG2(
             name: "BLS12381G2_XMD_SHA-256_SSWU_NU_"
         )
     }
 
-    func test_hash_to_curve_g2_RO() throws {
-        try doTestG2(
+    func test_hash_to_curve_g2_RO() async throws {
+        try await doTestG2(
             name: "BLS12381G2_XMD_SHA-256_SSWU_RO_"
         )
     }
@@ -60,8 +61,8 @@ private extension HashToCurveG1Tests {
     func doTestG1(
         name: String,
         reverseVectorOrder: Bool = false
-    ) throws {
-        try doTest(
+    ) async throws {
+        try await doTest(
             name: name,
             reverseVectorOrder: reverseVectorOrder
         ) { vector in
@@ -75,18 +76,20 @@ private extension HashToCurveG1Tests {
         } functionForOperation: { operation in
             switch operation {
             case .encode:
-                return encodeToG1
+                return _encodeToG1
             case .hash:
-                return hashToG1
+                return _hashToG1
             }
+        } operationResultToExpected: { projective in
+            try projective.affine()
         }
     }
     
     func doTestG2(
         name: String,
         reverseVectorOrder: Bool = false
-    ) throws {
-        try doTest(
+    ) async throws {
+        try await doTest(
             name: name,
             reverseVectorOrder: reverseVectorOrder
         ) { vector in
@@ -112,31 +115,35 @@ private extension HashToCurveG1Tests {
         } functionForOperation: { operation in
             switch operation {
             case .encode:
-                return encodeToG2
+                return _encodeToG2
             case .hash:
-                return hashToG2
+                return _hashToG2
             }
+        } operationResultToExpected: { projective in
+            projective.affine()
         }
     }
     
-    func doTest<Element: Equatable>(
+    func doTest<Expected: Equatable, OperationResult: Equatable>(
         name: String,
         reverseVectorOrder: Bool = false,
-        expectedFromVector: (HashToCurveTestSuite<Element>.Vector) throws -> Element,
-        functionForOperation: (Operation) -> (Message, DomainSeperationTag, Augmentation) throws -> Element
-    ) throws {
+        expectedFromVector: @escaping (HashToCurveTestSuite<Expected>.Vector) throws -> Expected,
+        functionForOperation: @escaping (Blomst.Operation) -> (Message, DomainSeperationTag, Augmentation) throws -> OperationResult,
+        operationResultToExpected: @escaping (OperationResult) throws -> Expected
+    ) async throws {
         
-        try doTestSuite(
+        try await doTestSuite(
             name: name,
             reverseVectorOrder: reverseVectorOrder
-        ) { (suite: HashToCurveTestSuite<Element>, vector: HashToCurveTestSuite<Element>.Vector, vectorIndex: Int) in
+        ) { (suite: HashToCurveTestSuite<Expected>, vector: HashToCurveTestSuite<Expected>.Vector, vectorIndex: Int) in
             print("✨ Starting test vector: #\(vectorIndex) in suite: '\(suite.name)'")
             let message = try vector.message()
             let domainSeperationTag = try suite.domainSeparationTag()
             
             let expected = try expectedFromVector(vector)
             let function = functionForOperation(suite.operation)
-            let result = try function(message, domainSeperationTag, Augmentation())
+            let operationResult = try function(message, domainSeperationTag, Augmentation())
+            let result = try operationResultToExpected(operationResult)
             XCTAssertEqual(result, expected)
             print("✅ passed test vector: #\(vectorIndex) in suite: '\(suite.name)'")
         }
@@ -145,10 +152,10 @@ private extension HashToCurveG1Tests {
     func doTestSuite<Element: Equatable>(
         name: String,
         reverseVectorOrder: Bool = false,
-        testVector: (HashToCurveTestSuite<Element>, HashToCurveTestSuite<Element>.Vector, Int) throws -> Void,
+        testVector: @escaping (HashToCurveTestSuite<Element>, HashToCurveTestSuite<Element>.Vector, Int) throws -> Void,
         line: UInt = #line
-    ) throws {
-        try doTestJSONFixture(
+    ) async throws {
+        try await doTestJSONFixture(
             name: name,
             decodeAs: HashToCurveTestSuite<Element>.self,
             reverseVectorOrder: reverseVectorOrder,
@@ -179,13 +186,8 @@ struct DecodableElement: Decodable {
     let y: String
 }
 
-enum Operation: Equatable {
-    case hash
-    case encode
-}
-
 extension HashToCurveTestSuite {
-    var operation: Operation {
+    var operation: Blomst.Operation {
         if randomOracle {
             return .hash
         } else {

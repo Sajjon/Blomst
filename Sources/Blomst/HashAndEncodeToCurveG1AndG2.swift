@@ -1,18 +1,52 @@
 import Foundation
 import BLST
 
+public struct HashOf<Element> {
+    public let element: Element
+}
+extension HashOf: Equatable where Element: Equatable {}
+extension HashOf: Hashable where Element: Hashable {}
+public struct EncodingOf<Element> {
+    public let element: Element
+}
+extension EncodingOf: Equatable where Element: Equatable {}
+extension EncodingOf: Hashable where Element: Hashable {}
+
 public func hashToG1(
     message: Message,
     domainSeperationTag: DomainSeperationTag,
     augmentation: Data = .init()
-) throws -> G1Affine {
+) throws -> HashOf<G1Projective> {
+    
+    try .init(element: _hashToG1(message: message, domainSeperationTag: domainSeperationTag, augmentation: augmentation))
+}
+internal func _hashToG1(
+    message: Message,
+    domainSeperationTag: DomainSeperationTag,
+    augmentation: Data = .init()
+) throws -> G1Projective {
     try _callBlstFN(
         message: message,
         domainSeperationTag: domainSeperationTag,
         augmentation: augmentation,
         newLowLevel: blst_p1(),
-        resultFromLowLevel: G1Affine.init(lowLevel:),
+        resultFromLowLevel: G1Projective.init(lowLevel:),
         blstFN: blst_hash_to_g1
+    )
+}
+
+internal func _hashToG2(
+    message: Message,
+    domainSeperationTag: DomainSeperationTag,
+    augmentation: Data = .init()
+) throws -> G2Projective {
+    try _callBlstFN(
+        message: message,
+        domainSeperationTag: domainSeperationTag,
+        augmentation: augmentation,
+        newLowLevel: blst_p2(),
+        resultFromLowLevel: G2Projective.init(lowLevel:),
+        blstFN: blst_hash_to_g2
     )
 }
 
@@ -20,15 +54,8 @@ public func hashToG2(
     message: Message,
     domainSeperationTag: DomainSeperationTag,
     augmentation: Data = .init()
-) throws -> G2Affine {
-    try _callBlstFN(
-        message: message,
-        domainSeperationTag: domainSeperationTag,
-        augmentation: augmentation,
-        newLowLevel: blst_p2(),
-        resultFromLowLevel: G2Affine.init(lowLevel:),
-        blstFN: blst_hash_to_g2
-    )
+) throws -> HashOf<G2Projective> {
+    try .init(element: _hashToG2(message: message, domainSeperationTag: domainSeperationTag, augmentation: augmentation))
 }
 
 internal func _callBlstFN<Result, LowLevel>(
@@ -60,32 +87,47 @@ internal func _callBlstFN<Result, LowLevel>(
 }
 
 
-public func encodeToG1(
+internal func _encodeToG1(
     message: Message,
     domainSeperationTag: DomainSeperationTag,
     augmentation: Data = .init()
-) throws -> G1Affine {
+) throws -> G1Projective {
     try _callBlstFN(
         message: message,
         domainSeperationTag: domainSeperationTag,
         augmentation: augmentation,
         newLowLevel: blst_p1(),
-        resultFromLowLevel: G1Affine.init(lowLevel:),
+        resultFromLowLevel: G1Projective.init(lowLevel:),
         blstFN: blst_encode_to_g1
     )
+}
+public func encodeToG1(
+    message: Message,
+    domainSeperationTag: DomainSeperationTag,
+    augmentation: Data = .init()
+) throws -> EncodingOf<G1Projective> {
+    try .init(element: _encodeToG1(message: message, domainSeperationTag: domainSeperationTag, augmentation: augmentation))
 }
 
 public func encodeToG2(
     message: Message,
     domainSeperationTag: DomainSeperationTag,
     augmentation: Data = .init()
-) throws -> G2Affine {
+) throws -> EncodingOf<G2Projective> {
+
+    try .init(element: _encodeToG2(message: message, domainSeperationTag: domainSeperationTag, augmentation: augmentation))
+}
+internal func _encodeToG2(
+    message: Message,
+    domainSeperationTag: DomainSeperationTag,
+    augmentation: Data = .init()
+) throws -> G2Projective {
     try _callBlstFN(
         message: message,
         domainSeperationTag: domainSeperationTag,
         augmentation: augmentation,
         newLowLevel: blst_p2(),
-        resultFromLowLevel: G2Affine.init(lowLevel:),
+        resultFromLowLevel: G2Projective.init(lowLevel:),
         blstFN: blst_encode_to_g2
     )
 }

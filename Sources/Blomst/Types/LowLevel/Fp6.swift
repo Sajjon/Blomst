@@ -17,6 +17,20 @@ public struct Fp6: Equatable {
 }
 
 public extension Fp6 {
+    
+    static let zero = Self(storage: .zero)
+    static let one = Self(storage: .one)
+    
+    var first: Fp2 {
+        storage.first
+    }
+    var second: Fp2 {
+        storage.second
+    }
+    var third: Fp2 {
+        storage.third
+    }
+    
     init(fp2 first: Fp2, second: Fp2, third: Fp2) {
         self.init(storage: .init(fp2: first.storage, second: second.storage, third: third.storage))
     }
@@ -41,6 +55,20 @@ internal extension Fp6 {
 }
 
 internal extension Fp6.Storage {
+    
+    static let zero = Fp6.Storage(fp2: .zero, second: .zero, third: .zero)
+    static let one = Fp6.Storage(fp2: .zero, second: .zero, third: .one)
+    
+    var first: Fp2 {
+        .init(storage: .init(lowLevel: self.lowLevel.fp2.0))
+    }
+    var second: Fp2 {
+        .init(storage: .init(lowLevel: self.lowLevel.fp2.1))
+    }
+    var third: Fp2 {
+        .init(storage: .init(lowLevel: self.lowLevel.fp2.2))
+    }
+    
     convenience init(fp2 first: Fp2.Storage, second: Fp2.Storage, third: Fp2.Storage) {
         let lowLevel = first.withUnsafeLowLevelAccess { f in
             second.withUnsafeLowLevelAccess { s in

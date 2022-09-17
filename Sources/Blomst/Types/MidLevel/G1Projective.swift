@@ -10,7 +10,7 @@ import BLST
 
 /// A wrapper of `BLS12-381` **projective** point, having three coordinates: `x, y, z`,
 /// guaranteed to be in the group `G1`.
-public struct G1Projective: Equatable, ProjectivePoint, CustomStringConvertible {
+public struct G1Projective: Equatable, ProjectivePoint, CustomStringConvertible, CompressedDataRepresentable {
     internal let p1: P1
    
     init(p1: P1) throws {
@@ -18,6 +18,14 @@ public struct G1Projective: Equatable, ProjectivePoint, CustomStringConvertible 
             throw Error.notInGroup
         }
         self.p1 = p1
+    }
+    
+    public init(compressedData: some ContiguousBytes) throws {
+        try self.init(p1: .init(compressedData: compressedData))
+    }
+    
+    init(lowLevel: P1.Storage.LowLevel) throws {
+        try self.init(p1: .init(storage: .init(lowLevel: lowLevel)))
     }
 }
 
@@ -52,6 +60,17 @@ public extension G1Projective {
 
     static func + (lhs: Self, rhs: Self) -> Self {
         try! self.init(p1: lhs.p1 + rhs.p1)
+    }
+    
+    /// Returns true if this element is the identity (the point at infinity).
+    var isIdentity: Bool {
+        if z == .zero {
+            assert(self == Self.identity)
+            return true
+        } else {
+            assert(self != Self.identity)
+            return false
+        }
     }
     
     /// Returns the identity of the group: the point at infinity.

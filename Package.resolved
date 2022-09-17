@@ -14,8 +14,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sajjon/BytePattern",
       "state" : {
-        "revision" : "385e8ad97e7b0d6c27baa99fc3135599cd70589e",
-        "version" : "0.0.3"
+        "revision" : "663d343d5f2c516e09fdac37db18dd1214a0bcda",
+        "version" : "0.0.6"
       }
     },
     {

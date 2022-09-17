@@ -13,3 +13,4 @@ public protocol AffinePoint {
     var y: Component { get }
     init(x: Component, y: Component) throws
 }
+

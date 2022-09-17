@@ -9,7 +9,7 @@ import Foundation
 import BLST
 
 /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`
-public struct P2Affine: Equatable, AffinePoint, UncompressedDataSerializable, UncompressedDataRepresentable, CompressedDataSerializable {
+public struct P2Affine: Equatable, AffinePoint, UncompressedDataSerializable, UncompressedDataRepresentable, CompressedDataSerializable, CompressedDataRepresentable {
     internal let storage: Storage
     
     internal init(storage: Storage) {
@@ -30,6 +30,9 @@ public extension P2Affine {
 public extension P2Affine {
     init(uncompressedData: some ContiguousBytes) throws {
         try self.init(storage: .init(uncompressedData: uncompressedData))
+    }
+    init(compressedData: some ContiguousBytes) throws {
+        try self.init(storage: .init(compressedData: compressedData))
     }
 }
 
@@ -89,7 +92,7 @@ public extension P2Affine {
 // MARK: Storage
 internal extension P2Affine {
     /// A wrapper of `BLS12-381` **affine** point, having two coordinates: `x, y`.
-    final class Storage: Equatable, AffinePoint, UncompressedDataSerializable, UncompressedDataRepresentable, CompressedDataSerializable {
+    final class Storage: Equatable, AffinePoint, UncompressedDataSerializable, UncompressedDataRepresentable, CompressedDataSerializable, CompressedDataRepresentable {
         internal typealias LowLevel = blst_p2_affine
         private let lowLevel: LowLevel
         
@@ -107,6 +110,16 @@ internal extension P2Affine.Storage {
         var lowLevel = LowLevel()
         try uncompressedData.withUnsafeBytes { inBytes in
             guard blst_p2_deserialize(&lowLevel, inBytes.baseAddress) == BLST_SUCCESS else {
+                throw Error.failedToDeserializeFromBytes
+            }
+        }
+        self.init(lowLevel: lowLevel)
+    }
+    
+    convenience init(compressedData: some ContiguousBytes) throws {
+        var lowLevel = LowLevel()
+        try compressedData.withUnsafeBytes { inBytes in
+            guard blst_p2_uncompress(&lowLevel, inBytes.baseAddress) == BLST_SUCCESS else {
                 throw Error.failedToDeserializeFromBytes
             }
         }
@@ -135,6 +148,10 @@ internal extension P2Affine.Storage {
     func withUnsafeLowLevelAccess<R>(_ access: (UnsafeMutablePointer<LowLevel>) throws -> R) rethrows -> R {
         var lowLevel = self.lowLevel
         return try access(&lowLevel)
+    }
+    
+    var lowLevelPointer: UnsafePointer<LowLevel> {
+        withUnsafeLowLevelAccess { UnsafePointer($0) }
     }
 }
 

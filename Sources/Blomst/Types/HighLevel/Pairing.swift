@@ -8,6 +8,20 @@
 import Foundation
 import BLST
 
+public enum Operation: Equatable {
+    case hash
+    case encode
+}
+
+private extension Operation {
+    var isHash: Bool {
+        switch self {
+        case .hash: return true
+        case .encode: return false
+        }
+    }
+}
+
 public struct Pairing {
 
     
@@ -15,7 +29,7 @@ public struct Pairing {
     
     init(
         domainSeperationTag: DomainSeperationTag,
-        hashOrEncode: Bool
+        operation: Operation
     ) {
 
         var v = [UInt64](
@@ -27,7 +41,7 @@ public struct Pairing {
             v.withUnsafeMutableBytes { vBytes in
                 blst_pairing_init(
                     OpaquePointer(vBytes.baseAddress),
-                    hashOrEncode,
+                    operation.isHash, // "hash_or_encode"
                     dstBytes.baseAddress,
                     domainSeperationTag.bytes.count
                 )
@@ -41,6 +55,18 @@ public struct Pairing {
 
 }
 
+
+private extension Pairing {
+    typealias Gt = Fp12
+    static func _aggregatedInG2(signature: Signature) -> Gt {
+        signature.p2.affine().withUnsafeLowLevelAccess { sig in
+            var out = blst_fp12()
+            blst_aggregated_in_g2(&out, sig)
+            return Gt(lowLevel: out)
+        }
+    }
+}
+
 public extension Pairing {
     
     func commit() {
@@ -49,44 +75,52 @@ public extension Pairing {
             blst_pairing_commit(ctx)
         }
     }
+
+    
+    func finalVerify(signature: Signature) -> Bool {
+        let gtSig = Pairing._aggregatedInG2(signature: signature)
+        return gtSig.withUnsafeLowLevelAccess { gtsig in
+            self.v.withUnsafeBytes {
+                let ctx = OpaquePointer($0.baseAddress)
+                return blst_pairing_finalverify(ctx, gtsig)
+            }
+        }
+    }
     
     /// Check and aggregate PublicKey in `G1`
     func aggregatePublicKeyInG1(
         publicKey: PublicKey,
-        signature: Signature,
+        signature: Signature?,
         message: Message,
-        augmentation: Augmentation,
+        augmentation: Augmentation = .init(),
         checkGroupOfPublicKey: Bool,
         checkGroupOfSignatue: Bool
     ) throws {
-        try publicKey.affine().withUnsafeLowLevelAccess { pubKey in
-            try signature.affine().withUnsafeLowLevelAccess { sig in
-                try self.v.withUnsafeBytes {
-                    let ctx = OpaquePointer($0.baseAddress)
-                    try message.withUnsafeBytes { msgBytes in
-                        var msgBase = OpaquePointer(msgBytes.baseAddress)
-                        try augmentation.withUnsafeBytes { augBytes in
-                            var augBase = OpaquePointer(augBytes.baseAddress)
-
-                            guard blst_pairing_chk_n_aggr_pk_in_g1(
-                                ctx,
-                                pubKey,
-                                checkGroupOfPublicKey,
-                                sig,
-                                checkGroupOfSignatue,
-                                &msgBase,
-                                message.count,
-                                &augBase,
-                                augmentation.count
-                            ) == BLST_SUCCESS else {
-                                throw Error.failedToPair
-                            }
+        var wasPerformed = false
+        try message.withUnsafeBytes { msgBytes in
+            try publicKey.affine().withUnsafeLowLevelAccess { pubKeyLowLevel in
+                try augmentation.withUnsafeBytes { augBytes in
+                    try self.v.withUnsafeBytes { contextBytes in
+                        let context = OpaquePointer(contextBytes.baseAddress!)
+                        guard blst_pairing_chk_n_aggr_pk_in_g1(
+                            context,
+                            pubKeyLowLevel,
+                            checkGroupOfPublicKey,
+                            signature.map { $0.affine().storage.lowLevelPointer } ?? nil,
+                            checkGroupOfSignatue,
+                            msgBytes.bindMemory(to: UInt8.self).baseAddress!,
+                            message.count,
+                            augBytes.bindMemory(to: UInt8.self).baseAddress!,
+                            augmentation.count
+                        ) == BLST_SUCCESS else {
+                            throw Error.failedToPair
                         }
+                        wasPerformed = true
                     }
                 }
             }
         }
-        
+        assert(wasPerformed)
         // All good
     }
     

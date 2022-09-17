@@ -33,6 +33,7 @@ public struct G2Affine: Equatable, AffinePoint, UncompressedDataSerializable {
     }
 }
 
+
 public extension G2Affine {
 
     init(x: Fp2, y: Fp2) throws {

@@ -36,23 +36,23 @@ extension XCTestCase {
         name: String,
         decodeAs: S.Type,
         reverseVectorOrder: Bool = false,
-        testVectorFunction: (S, S.Test, Int) throws -> Void,
+        testVectorFunction: @escaping (S, S.Test, Int) async throws -> Void,
         file: StaticString = #file,
         line: UInt = #line
-    ) throws where S.Test: Decodable {
-        try _doTestSuite(
+    ) async throws where S.Test: Decodable {
+        try await _doTestSuite(
             fileName: name,
             fileExtension: "json",
             suiteFromData: { try JSONDecoder().decode(S.self, from: $0) },
             testSuite: { suite in
                 if reverseVectorOrder {
                     for (testIndex, test) in suite.tests.enumerated().reversed() {
-                         try testVectorFunction(suite, test, testIndex)
-                     }
+                        try await testVectorFunction(suite, test, testIndex)
+                    }
                 } else {
-                     for (testIndex, test) in suite.tests.enumerated() {
-                         try testVectorFunction(suite, test, testIndex)
-                     }
+                    for (testIndex, test) in suite.tests.enumerated() {
+                        try await testVectorFunction(suite, test, testIndex)
+                    }
                 }
             },
             file: file,
@@ -64,9 +64,9 @@ extension XCTestCase {
         name: String,
         file: StaticString = #file,
         line: UInt = #line,
-        testSuite: (Data) throws -> Void
-    ) throws {
-        try _doTestSuite(
+        testSuite: @escaping (Data) throws -> Void
+    ) async throws {
+        try await _doTestSuite(
             fileName: name,
             fileExtension: "dat",
             suiteFromData: { $0 },
@@ -79,14 +79,16 @@ extension XCTestCase {
 }
     
 private extension XCTestCase {
+    
+    @MainActor
     func _doTestSuite<Suite>(
         fileName: String,
         fileExtension: String,
-        suiteFromData: (Data) throws -> Suite,
-        testSuite: (Suite) throws -> Void,
+        suiteFromData: @escaping (Data) throws -> Suite,
+        testSuite: @escaping (Suite) async throws -> Void,
         file: StaticString = #file,
         line: UInt = #line
-    ) throws {
+    ) async throws {
 
         let testsDirectory: String = URL(fileURLWithPath: "\(#file)").pathComponents.dropLast(3).joined(separator: "/")
         
@@ -106,6 +108,7 @@ private extension XCTestCase {
 
         let suite = try suiteFromData(data)
        
-        try testSuite(suite)
+        try await testSuite(suite)
+        
     }
 }

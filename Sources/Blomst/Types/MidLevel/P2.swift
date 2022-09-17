@@ -63,6 +63,10 @@ public extension P2 {
     init(uncompressedData: some ContiguousBytes) throws {
         try self.init(storage: .init(uncompressedData: uncompressedData))
     }
+    
+    init(compressedData: some ContiguousBytes) throws {
+        try self.init(storage: .init(compressedData: compressedData))
+    }
 }
 
 public extension P2 {
@@ -127,7 +131,7 @@ internal extension P2 {
         }
         
         static var identity: P2.Storage {
-            fatalError()
+            try! .init(x: .zero, y: .one, z: .zero)
         }
         
         var x: Component {
@@ -154,6 +158,8 @@ internal extension P2 {
         internal typealias LowLevel = blst_p2
         private let lowLevel: LowLevel
         
+    
+        
         internal init(lowLevel: LowLevel) {
             self.lowLevel = lowLevel
             withUnsafeLowLevelAccess {
@@ -176,6 +182,11 @@ internal extension P2.Storage {
 internal extension P2.Storage {
     convenience init(uncompressedData: some ContiguousBytes) throws {
         let affine = try Affine(uncompressedData: uncompressedData)
+        self.init(affine: affine)
+    }
+    
+    convenience init(compressedData: some ContiguousBytes) throws {
+        let affine = try Affine(compressedData: compressedData)
         self.init(affine: affine)
     }
 }

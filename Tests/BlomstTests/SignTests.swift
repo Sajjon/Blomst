@@ -6,32 +6,119 @@
 //
 
 import Foundation
-import Blomst
+@testable import Blomst
 import XCTest
 import XCTAssertBytesEqual
+import BytesMutation
 
+@MainActor
 final class SignTests: XCTestCase {
     
     override func setUp() {
         super.setUp()
         continueAfterFailure = false
+        DefaultXCTAssertBytesEqualParameters.haltOnPatternNonIdentical = true
+        DefaultXCTAssertBytesEqualParameters.passOnPatternNonIdentical = true
     }
     
-    func test_sign_vectors() throws {
-        try doTestSuite(
+    func test_g1Affine_Generator() throws {
+        
+        let sut = G1Affine.generator
+        try XCTAssertBytesEqual(
+            sut.x.uncompressedData(),
+            [UInt64]([
+                0x5cb3_8790_fd53_0c16,
+                0x7817_fc67_9976_fff5,
+                0x154f_95c7_143b_a1c1,
+                0xf0ae_6acd_f3d0_e747,
+                0xedce_6ecc_21db_f440,
+                0x1201_7741_9e0b_fb75,
+            ]).reduce(Data(), { $0 + $1.data }).swapEndianessOfUInt64sFromBytes()
+        )
+        try XCTAssertBytesEqual(
+            sut.y.uncompressedData(),
+            [UInt64]([
+                0xbaac_93d5_0ce7_2271,
+                0x8c22_631a_7918_fd8e,
+                0xdd59_5f13_5707_25ce,
+                0x51ac_5829_5040_5194,
+                0x0e1c_8c3f_ad00_59c0,
+                0x0bbc_3efc_5008_a26a,
+            ]).reduce(Data(), { $0 + $1.data }).swapEndianessOfUInt64sFromBytes()
+        )
+    }
+    
+    func test_g1Affine_generator_negated() throws {
+        let expected = try Data(hex: "17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb114d1d6855d545a8aa7d76c8cf2e21f267816aef1db507c96655b9d5caac42364e6f38ba0ecb751bad54dcd6b939c2ca")
+        let sut = try G1Affine.generator.negated()
+        try XCTAssertBytesEqual(sut.uncompressedData(), expected)
+    }
+    
+    func test_sign_vectors() async throws {
+
+        try await doTestSuite(
             name: "SignatureTestVectors"
         ) { suite, vector, vectorIndex in
-            guard vectorIndex > 0 else { return }
+            guard vectorIndex >= 2 else { return }
+            
+            let message = try vector.message()
+            let dst = try vector.dst()
+            let g1 = try G1Projective(compressedData: vector.g1CompressedData())
+            let g2 = try G2Projective(compressedData: vector.g2CompressedData())
+            try XCTAssertEqual(g1, hashToG1(message: message, domainSeperationTag: dst).element)
+            try XCTAssertEqual(g2, hashToG2(message: message, domainSeperationTag: dst).element)
+            
+            
             let secretKey = try SecretKey(
                 decimalString: vector.secretKeyDecimalString()
             )
             let publicKey = try PublicKey(compressedData: vector.publicKeyData())
             XCTAssertEqual(secretKey.publicKey(), publicKey)
             let signature = try secretKey.sign(
-                message: vector.message(),
-                domainSeperationTag: vector.dst()
+                message: message,
+                domainSeperationTag: dst
             )
             try XCTAssertEqual(signature.affine().compressedData(), vector.signatureData())
+            
+            // VERIFY
+            let isSignatureValid = try await signature.verify(
+                publicKey: publicKey,
+                message: message,
+                domainSeperationTag: dst
+            )
+            XCTAssertTrue(isSignatureValid)
+            
+            var isInvalidSignatureValid = try await signature.verify(
+                publicKey: publicKey,
+                message: message + Data([0xde]),
+                domainSeperationTag: dst
+            )
+            XCTAssertFalse(isInvalidSignatureValid, "Tampered message should not result in signature validation.")
+            
+            let someOtherPubKey = try PublicKey(uncompressedData: Data(hex: "8bb1ad17ca77078a500ef0780c3c3a5f0dc26290b0bfb21d2c76f1a827bed8764d7f32332dc2db3084b1faea29134ea7"))
+            
+            isInvalidSignatureValid = try await signature.verify(
+                publicKey: someOtherPubKey,
+                message: message,
+                domainSeperationTag: dst
+            )
+            
+            XCTAssertFalse(isInvalidSignatureValid, "Other public key should not consider to have signed the signature.")
+            
+            let forgedSignature = Signature(p2: .identity)
+            isInvalidSignatureValid = try await forgedSignature.verify(
+                publicKey: publicKey,
+                message: message,
+                domainSeperationTag: dst
+            )
+            XCTAssertFalse(isInvalidSignatureValid, "Forged signature should not be considered valid.")
+            
+            isInvalidSignatureValid = try await signature.verify(
+                publicKey: publicKey,
+                message: message,
+                domainSeperationTag: .init(data: Data(hex: "deadbeef"))
+            )
+            XCTAssertFalse(isInvalidSignatureValid, "Wrong DSTs should not be considered valid.")
         }
     }
 }
@@ -41,10 +128,10 @@ private extension SignTests {
     func doTestSuite(
         name: String,
         reverseVectorOrder: Bool = false,
-        testVector: @escaping (SignTestSuite, SignTestSuite.Test, Int) throws -> Void,
+        testVector: @escaping (SignTestSuite, SignTestSuite.Test, Int) async throws -> Void,
         line: UInt = #line
-    ) throws {
-        try doTestJSONFixture(
+    ) async throws {
+        try await doTestJSONFixture(
             name: name,
             decodeAs: SignTestSuite.self,
             reverseVectorOrder: reverseVectorOrder,
@@ -60,26 +147,6 @@ struct SignTestSuite: TestSuite, Decodable {
     public let cases: [Test]
     public var tests: [Test] { cases }
 
-    /*
-     {
-       "Msg": "",
-       "Ciphersuite": "",
-       "G1Compressed": "iMfjiO5Y8duaJNcJiwHRNjQpi+vy0VklSXW9RQyw0of8xiLrce3ei0aahRNVG68f",
-       "G2Compressed": "tpMntJx8f85XL+S+CDcW+K1dHJhsRBIOgcnGwDb9RkhF/iTtOM/Ok9D0ZHcZ8bteAXh8hH3vRZLMVGVsAzKPLO9i2oUrbNYcy6FEfpTGqXJSeEh/KPPHGfJOKY6eCTqj",
-       "BLSPrivKey": "",
-       "BLSPubKey": null,
-       "BLSSigG2": null
-     },
-     {
-       "Msg": "",
-       "Ciphersuite": "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_",
-       "G1Compressed": "hMW6jNJQe93jbkaX0CfwuJUHmHHFh+7DY819un+7BfxKvHjAFQ9Glqr4jhBDqXPD",
-       "G2Compressed": "qKqzA+M+0U9KkEAEqSvSb/yWnB0efUt/DAQVCnPhhFqRHlGistNp1c7wZWDFrJ9XFcAVZpk9RGmAXfPh8ptTZIGoMr8nUbaQj67Wd20GLVhVIYiSMpmdcrZ51uOLtc//",
-       "BLSPrivKey": "27539689655622540958679105641905086851274830069992722298279813327323206776590",
-       "BLSPubKey": "sr4R3I5U7nTbwHVp/XT+A7X1Ktcc1JqFebbGOHiR9aIK2YDsJ0dhjBua01hGpoo+",
-       "BLSSigG2": "tTz9+LSIoobfHtIEMuK7xOY2EAN1ff2jpP1s2Y3pXlUT98RI1wsmgeFFR6bO1H58EOKEMuiryzTeHcKPOTKP0qE9sSpMajC9F7DkKIGkKQA+TCRYO6DymkD9g2zwXhpA"
-     },
-     */
     struct Test: Decodable {
         let Msg: String
         let Ciphersuite: String
@@ -107,6 +174,16 @@ struct SignTestSuite: TestSuite, Decodable {
         
         func publicKeyData(line: UInt = #line) throws -> Data {
             let base64Encoded = try XCTUnwrap(BLSPubKey, line: line)
+            return try XCTUnwrap(Data(base64Encoded: base64Encoded), line: line)
+        }
+        
+        func g1CompressedData(line: UInt = #line) throws -> Data {
+            let base64Encoded = try XCTUnwrap(G1Compressed, line: line)
+            return try XCTUnwrap(Data(base64Encoded: base64Encoded), line: line)
+        }
+        
+        func g2CompressedData(line: UInt = #line) throws -> Data {
+            let base64Encoded = try XCTUnwrap(G2Compressed, line: line)
             return try XCTUnwrap(Data(base64Encoded: base64Encoded), line: line)
         }
     }

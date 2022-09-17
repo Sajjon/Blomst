@@ -11,6 +11,7 @@ import Foundation
 import XCTAssertBytesEqual
 import BLST
 
+@MainActor
 final class BloodyBasics: XCTestCase {
     
     override func setUp() {

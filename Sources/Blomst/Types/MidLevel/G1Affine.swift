@@ -85,6 +85,26 @@ public extension G1Affine {
         p1Affine.isInfinity
     }
     
+    static let generator = try! Self(p1: .generator)
+    
+    func negated() throws -> Self {
+        //        //        y: Fp::conditional_select(&-self.y, &Fp::one(), self.infinity),
+        //                y: isInfinity ? blst_fp_cneg(<#T##ret: UnsafeMutablePointer<blst_fp>!##UnsafeMutablePointer<blst_fp>!#>, <#T##a: UnsafePointer<blst_fp>!##UnsafePointer<blst_fp>!#>, <#T##flag: Bool##Bool#>)
+        let conditionalY: Fp1 = {
+            var out = blst_fp()
+            y.withUnsafeLowLevelAccess { fp in
+                blst_fp_cneg(&out, fp, self.isInfinity)
+            }
+            return Fp1.init(lowLevel: out)
+        }()
+        
+        return try Self(
+            x: self.x,
+            y: conditionalY
+            //                 infinity: self.infinity,
+        )
+    }
+    
     /// From uncompressed data
     init(uncompressedData: some ContiguousBytes) throws {
         try self.init(p1Affine: .init(uncompressedData: uncompressedData))

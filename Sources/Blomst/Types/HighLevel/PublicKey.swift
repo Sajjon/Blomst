@@ -35,6 +35,9 @@ public extension PublicKey {
     func affine() -> Affine {
         p1.affine()
     }
+    func projective() throws -> G1Projective {
+        try .init(p1: p1)
+    }
 }
 
 // MARK: UncompressedDataSerializable

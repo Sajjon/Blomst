@@ -114,6 +114,7 @@ internal extension P1Affine {
     {
         
         internal typealias LowLevel = blst_p1_affine
+        
         private let lowLevel: LowLevel
         
         internal init(lowLevel: LowLevel) {

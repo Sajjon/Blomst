@@ -111,24 +111,12 @@ public extension SecretKey {
         domainSeperationTag: DomainSeperationTag = .G2,
         augmentation: Augmentation = .init()
     ) throws -> Signature {
-//        domainSeperationTag.withUnsafeBytes { dstBytes in
-//            augmentation.withUnsafeBytes { augBytes in
-//                message.withUnsafeBytes { msgBytes in
-//
-//                    var outSig = blst_p2()
-//                    self.scalar.withUnsafeLowLevelAccess { sk in
-//                        blst_sign_pk_in_g1(&outSig, &hash, sk)
-//                    }
-//                    return Signature(p2: .init(lowLevel: outSig))
-//                }
-//            }
-//        }
         let hashAffine = try hashToG2(
             message: message,
             domainSeperationTag: domainSeperationTag,
             augmentation: augmentation
         )
-        let hash = hashAffine.p2
+        let hash = hashAffine.element.p2
         var outSig = blst_p2()
      
         self.scalar.withUnsafeLowLevelAccess { sk in

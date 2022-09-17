@@ -8,11 +8,39 @@
 import Foundation
 import BLST
 
-public struct Fp12: Equatable {
+public struct Fp12:
+    Equatable,
+    MultiplicativeArithmetic,
+    CustomDebugStringConvertible
+{
     internal let storage: Storage
     init(storage: Storage) {
         self.storage = storage
     }
+    init(lowLevel: Storage.LowLevel) {
+        self.init(storage: .init(lowLevel: lowLevel))
+    }
+    
+    public var debugDescription: String {
+        storage.debugDescription
+    }
+}
+
+public extension Fp12 {
+    static let one = Self.init(storage: .one)
+    
+    
+    var first: Fp6 {
+        storage.first
+    }
+    var second: Fp6 {
+        storage.second
+    }
+    
+    static func * (lhs: Self, rhs: Self) -> Self {
+        Self(storage: lhs.storage * rhs.storage)
+    }
+    
 }
 
 public extension Fp12 {
@@ -35,7 +63,55 @@ internal extension Fp12 {
 
 
 internal extension Fp12 {
-    final class Storage: Equatable {
+    final class Storage:
+        Equatable,
+        MultiplicativeArithmetic,
+        CustomDebugStringConvertible,
+        UncompressedDataSerializable
+    {
+        static func * (lhs: Fp12.Storage, rhs: Fp12.Storage) -> Fp12.Storage {
+            lhs.withUnsafeLowLevelAccess { l in
+                rhs.withUnsafeLowLevelAccess { r in
+                    var product = LowLevel()
+                    blst_fp12_mul(&product, l, r)
+                    return Fp12.Storage(lowLevel: product)
+                }
+            }
+        }
+        
+        var debugDescription: String {
+            try! uncompressedData().hex
+        }
+        
+        /// This function yield identical result as
+        ///
+        /// func uncompressedData() throws -> Data {
+        ///     var lowLevelCopy = self.lowLevel
+        ///     var data = Data.init(repeating: 0xff, count: 48)
+        ///
+        ///     Swift.withUnsafePointer(to: &lowLevelCopy) { llc in
+        ///         data.withUnsafeMutableBytes { target in
+        ///             let source = UnsafeRawBufferPointer.init(start: llc, count: 48)
+        ///             target.copyBytes(from: source)
+        ///         }
+        ///     }
+        ///
+        ///     return data
+        /// }
+        func uncompressedData() throws -> Data {
+            let uint64s = Swift.withUnsafeBytes(of: lowLevel.fp6) {
+                $0.bindMemory(to: UInt64.self)
+            }
+            return uint64s.map { $0.bigEndian.data }.reduce(Data()) { $0 + $1 }
+        }
+        
+        var first: Fp6 {
+            .init(storage: .init(lowLevel: lowLevel.fp6.0))
+        }
+        var second: Fp6 {
+            .init(storage: .init(lowLevel: lowLevel.fp6.1))
+        }
+        
         typealias LowLevel = blst_fp12
         private let lowLevel: LowLevel
         internal init(lowLevel: LowLevel) {
@@ -45,6 +121,10 @@ internal extension Fp12 {
 }
 
 internal extension Fp12.Storage {
+    
+    static let one = Fp12.Storage(fp6: .zero, second: .init(fp2: .zero, second: .zero, third: .one))
+    static let zero = Fp12.Storage(fp6: .zero, second: .zero)
+    
     convenience init(fp6 first: Fp6.Storage, second: Fp6.Storage) {
         let lowLevel = first.withUnsafeLowLevelAccess { f in
             second.withUnsafeLowLevelAccess { s in
